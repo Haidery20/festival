@@ -154,7 +154,7 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <Card className="bg-primary-foreground/10 border-primary-foreground/20">
               <CardContent className="p-8 text-center">
-                <Handshake className="h-12 w-12 text-accent mx-auto mb-4" />
+                <img src="/gov.png" className="h-32 w-24 text-accent mx-auto mb-4"/>
                 <h3 className="text-2xl font-bold text-primary-foreground mb-3">Government of Tanzania</h3>
                 <p className="text-primary-foreground/80">
                   Official support from the Tanzania Tourism Board and Ministry of Natural Resources, ensuring our
@@ -165,7 +165,7 @@ export default function AboutPage() {
 
             <Card className="bg-primary-foreground/10 border-primary-foreground/20">
               <CardContent className="p-8 text-center">
-                <Users className="h-12 w-12 text-accent mx-auto mb-4" />
+                <img src="/lrct.svg" className="h-32 w-24 text-accent mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-primary-foreground mb-3">Land Rover Club Tanzania</h3>
                 <p className="text-primary-foreground/80">
                   Partnership with the official Land Rover Club Tanzania, bringing together the most experienced
