@@ -15,7 +15,7 @@ export function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
-              <img src="/festlogo.jpeg" alt="Land Rover Festival Tanzania" className="h-8 w-8" />
+              <img src="/festivallogo.svg" alt="Land Rover Festival Tanzania" className="h-8 w-8" />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg text-foreground">Land Rover</span>

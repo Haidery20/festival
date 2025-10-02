@@ -21,8 +21,10 @@ export const metadata: Metadata = {
   description:
     "Join the ultimate Land Rover adventure in Tanzania. Experience off-road driving and cultural celebrations.",
   generator: "v0.app",
-}
-
+  openGraph: {
+    images: ["/festivallogo.svg"],
+  },
+  }
 export default function RootLayout({
   children,
 }: Readonly<{

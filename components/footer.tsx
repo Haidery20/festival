@@ -10,7 +10,7 @@ export function Footer() {
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center space-x-2 mb-4">
               <div className="flex items-center space-x-1">
-                <img src="/festlogo.jpeg" alt="Land Rover Festival" className="h-8 w-8" />
+                <img src="/festivallogo.svg" alt="Land Rover Festival" className="h-64 w-auto block shrink-0" />
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-lg">Land Rover Festival</span>
