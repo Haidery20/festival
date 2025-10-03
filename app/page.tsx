@@ -2,13 +2,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import { Calendar, MapPin, Users, Trophy, Mountain, Compass, Camera, Shield } from "lucide-react"
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel"
+import Image from "next/image"
+import Autoplay from "embla-carousel-autoplay"
+import { PartnersCarousel } from "@/components/partners-carousel"
+import { HeroCarousel } from "@/components/hero-carousel"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="hero-gradient relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/festlogo.jpeg')] bg-cover bg-center opacity-30"></div>
+        {/* Replace static background with slider */}
+        <HeroCarousel />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-primary-foreground mb-6">
@@ -39,15 +45,15 @@ export default function HomePage() {
               <div className="flex items-center justify-center space-x-3 text-primary-foreground/90">
                 <Calendar className="h-6 w-6 text-accent" />
                 <div className="text-left">
-                  <p className="font-semibold">July 15-17, 2025</p>
+                  <p className="font-semibold">November 28-30, 2025</p>
                   <p className="text-sm text-primary-foreground/70">3 Days of Adventure</p>
                 </div>
               </div>
               <div className="flex items-center justify-center space-x-3 text-primary-foreground/90">
                 <MapPin className="h-6 w-6 text-accent" />
                 <div className="text-left">
-                  <p className="font-semibold">Serengeti Region</p>
-                  <p className="text-sm text-primary-foreground/70">Northern Tanzania</p>
+                  <p className="font-semibold">Iringa Region</p>
+                  <p className="text-sm text-primary-foreground/70">Iringa, Tanzania</p>
                 </div>
               </div>
               <div className="flex items-center justify-center space-x-3 text-primary-foreground/90">
@@ -116,7 +122,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       {/* Importance Section */}
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -163,6 +168,20 @@ export default function HomePage() {
               <div className="aspect-square bg-[url('/fest1.jpeg')] bg-cover bg-center rounded-lg"></div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Partners Section */}
+      <section className="py-16 bg-background border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Our Partners</h2>
+            <p className="text-muted-foreground">
+              We’re proud to collaborate with organizations supporting the festival.
+            </p>
+          </div>
+
+          <PartnersCarousel />
         </div>
       </section>
 

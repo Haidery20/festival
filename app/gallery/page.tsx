@@ -328,11 +328,11 @@ export default function GalleryPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-6">Create Your Own Memories</h2>
           <p className="text-xl text-primary-foreground/80 mb-8 leading-relaxed">
-            Join us for the 2025 festival and become part of our growing gallery of adventure and community spirit.
+            Join us for the festival in Iringa Region, Tanzania — November 28-30, 2025, and become part of our growing gallery of adventure and community spirit.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <a href="/register">Register for 2025</a>
+              <a href="/register">Register for November 28-30</a>
             </Button>
             <Button
               size="lg"

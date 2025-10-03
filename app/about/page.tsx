@@ -183,7 +183,7 @@ export default function AboutPage() {
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">Be Part of Our Story</h2>
           <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
             Join us in creating unforgettable memories and building lasting connections. Register now for the Land Rover
-            Festival Tanzania 2025.
+            Festival in Iringa Region, Tanzania — November 28-30, 2025.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild className="bg-primary hover:bg-primary/90">

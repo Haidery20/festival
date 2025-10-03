@@ -52,7 +52,7 @@ export default function ContactPage() {
                       <Mail className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
                       <div>
                         <h3 className="font-semibold text-foreground mb-1">Email</h3>
-                        <p className="text-muted-foreground">info@landroverfestival.tz</p>
+                        <p className="text-muted-foreground">info@landroverfestival.co.tz</p>
                         <p className="text-sm text-muted-foreground mt-1">General inquiries and registration support</p>
                       </div>
                     </div>
@@ -65,7 +65,18 @@ export default function ContactPage() {
                       <Phone className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
                       <div>
                         <h3 className="font-semibold text-foreground mb-1">Phone</h3>
-                        <p className="text-muted-foreground">+255 123 456 789</p>
+                        <div className="text-muted-foreground space-y-1">
+                          <p>
+                            <a href="tel:+255763652641" className="hover:text-primary focus:outline-none focus:underline">
+                              +255 763 652 641
+                            </a>
+                          </p>
+                          <p>
+                            <a href="tel:+255759348343" className="hover:text-primary focus:outline-none focus:underline">
+                              +255 759 348 343
+                            </a>
+                          </p>
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           Available Monday - Friday, 8:00 AM - 6:00 PM EAT
                         </p>

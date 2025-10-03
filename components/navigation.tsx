@@ -7,6 +7,7 @@ import { Menu, X, Car, Mountain } from "lucide-react"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const showGallery = false
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -31,9 +32,11 @@ export function Navigation() {
             <Link href="/about" className="text-foreground hover:text-primary transition-colors">
               About
             </Link>
-            <Link href="/gallery" className="text-foreground hover:text-primary transition-colors">
-              Gallery
-            </Link>
+            {showGallery && (
+              <Link href="/gallery" className="text-foreground hover:text-primary transition-colors">
+                Gallery
+              </Link>
+            )}
             <Link href="/contact" className="text-foreground hover:text-primary transition-colors">
               Contact
             </Link>
@@ -68,13 +71,15 @@ export function Navigation() {
               >
                 About
               </Link>
-              <Link
-                href="/gallery"
-                className="block px-3 py-2 text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                Gallery
-              </Link>
+              {showGallery && (
+                <Link
+                  href="/gallery"
+                  className="block px-3 py-2 text-foreground hover:text-primary transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Gallery
+                </Link>
+              )}
               <Link
                 href="/contact"
                 className="block px-3 py-2 text-foreground hover:text-primary transition-colors"

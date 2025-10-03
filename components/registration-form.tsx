@@ -27,9 +27,9 @@ interface RegistrationData {
   // Vehicle Information
   vehicleModel: string
   vehicleYear: string
-  vehicleColor: string
-  licensePlate: string
-  engineSize: string
+  modelDescription: string
+  // removed: licensePlate
+  // removed: engineSize
   modifications: string
 
   // Festival Information
@@ -43,6 +43,7 @@ interface RegistrationData {
   termsAccepted: boolean
   insuranceConfirmed: boolean
   safetyAcknowledged: boolean
+  mediaConsent: boolean
 }
 
 export function RegistrationForm() {
@@ -58,9 +59,9 @@ export function RegistrationForm() {
     emergencyPhone: "",
     vehicleModel: "",
     vehicleYear: "",
-    vehicleColor: "",
-    licensePlate: "",
-    engineSize: "",
+    modelDescription: "",
+    // removed: licensePlate
+    // removed: engineSize
     modifications: "",
     accommodationType: "",
     dietaryRestrictions: "",
@@ -70,6 +71,7 @@ export function RegistrationForm() {
     termsAccepted: false,
     insuranceConfirmed: false,
     safetyAcknowledged: false,
+    mediaConsent: false,
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -135,11 +137,11 @@ export function RegistrationForm() {
     console.log("[v0] Form submission started", formData)
 
     // Validate required checkboxes
-    if (!formData.termsAccepted || !formData.insuranceConfirmed || !formData.safetyAcknowledged) {
+    if (!formData.termsAccepted || !formData.insuranceConfirmed || !formData.safetyAcknowledged || !formData.mediaConsent) {
       console.log("[v0] Validation failed - missing required checkboxes")
       toast({
         title: "Please accept all required terms",
-        description: "You must accept the terms, confirm insurance, and acknowledge safety requirements.",
+        description: "You must accept the terms, confirm insurance, acknowledge safety requirements, and consent to media capture.",
         variant: "destructive",
       })
       return
@@ -222,9 +224,9 @@ export function RegistrationForm() {
                   emergencyPhone: "",
                   vehicleModel: "",
                   vehicleYear: "",
-                  vehicleColor: "",
-                  licensePlate: "",
-                  engineSize: "",
+                  modelDescription: "",
+                  // removed: licensePlate
+                  // removed: engineSize
                   modifications: "",
                   accommodationType: "",
                   dietaryRestrictions: "",
@@ -234,6 +236,7 @@ export function RegistrationForm() {
                   termsAccepted: false,
                   insuranceConfirmed: false,
                   safetyAcknowledged: false,
+                  mediaConsent: false,
                 })
               }}
               variant="outline"
@@ -409,36 +412,55 @@ export function RegistrationForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vehicleColor">
-                  Color <span className="text-destructive">*</span>
+                <Label htmlFor="modelDescription">
+                  Model Description <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="vehicleColor"
-                  value={formData.vehicleColor}
-                  onChange={(e) => handleInputChange("vehicleColor", e.target.value)}
-                  required
-                />
+                <Select
+                  value={formData.modelDescription}
+                  onValueChange={(value) => handleInputChange("modelDescription", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select specific model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Defender Variants */}
+                    <SelectItem value="defender-90">Defender 90</SelectItem>
+                    <SelectItem value="defender-110">Defender 110</SelectItem>
+                    <SelectItem value="defender-130">Defender 130</SelectItem>
+                    <SelectItem value="defender-td5">Defender Td5</SelectItem>
+                    <SelectItem value="defender-300tdi">Defender 300Tdi</SelectItem>
+                    <SelectItem value="defender-puma">Defender Puma (TDCi)</SelectItem>
+                    {/* Discovery Variants */}
+                    <SelectItem value="discovery-1">Discovery 1</SelectItem>
+                    <SelectItem value="discovery-2-td5">Discovery 2 (Td5)</SelectItem>
+                    <SelectItem value="discovery-3-lr3">Discovery 3 (LR3)</SelectItem>
+                    <SelectItem value="discovery-4-sdv6">Discovery 4 (SDV6)</SelectItem>
+                    <SelectItem value="discovery-5">Discovery 5</SelectItem>
+                    {/* Range Rover Variants */}
+                    <SelectItem value="range-rover-classic">Range Rover Classic</SelectItem>
+                    <SelectItem value="range-rover-p38">Range Rover P38</SelectItem>
+                    <SelectItem value="range-rover-l322">Range Rover L322</SelectItem>
+                    <SelectItem value="range-rover-l405">Range Rover L405</SelectItem>
+                    <SelectItem value="range-rover-l460">Range Rover L460</SelectItem>
+                    {/* Range Rover Sport Variants */}
+                    <SelectItem value="range-rover-sport-l320">Range Rover Sport L320</SelectItem>
+                    <SelectItem value="range-rover-sport-l494">Range Rover Sport L494</SelectItem>
+                    <SelectItem value="range-rover-sport-l461">Range Rover Sport L461</SelectItem>
+                    {/* Evoque Variants */}
+                    <SelectItem value="evoque-gen1">Range Rover Evoque (Gen 1)</SelectItem>
+                    <SelectItem value="evoque-gen2">Range Rover Evoque (Gen 2)</SelectItem>
+                    {/* Velar */}
+                    <SelectItem value="velar">Range Rover Velar</SelectItem>
+                    {/* Freelander */}
+                    <SelectItem value="freelander-1">Freelander 1</SelectItem>
+                    <SelectItem value="freelander-2">Freelander 2</SelectItem>
+                    {/* Other */}
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="licensePlate">
-                  License Plate <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="licensePlate"
-                  value={formData.licensePlate}
-                  onChange={(e) => handleInputChange("licensePlate", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="engineSize">Engine Size</Label>
-                <Input
-                  id="engineSize"
-                  placeholder="e.g., 2.0L, 3.0L"
-                  value={formData.engineSize}
-                  onChange={(e) => handleInputChange("engineSize", e.target.value)}
-                />
-              </div>
+              {/* Removed License Plate field */}
+              {/* Removed Engine Size field */}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="modifications">Vehicle Modifications</Label>
                 <Textarea
@@ -453,7 +475,7 @@ export function RegistrationForm() {
           </div>
 
           {/* Festival Information */}
-          <div>
+          {/* <div>
             <h3 className="text-xl font-semibold text-foreground mb-4">Festival Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -520,7 +542,7 @@ export function RegistrationForm() {
                 <Label htmlFor="previousParticipation">I participated in the previous Land Rover Festival</Label>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Terms and Conditions */}
           <div>
@@ -533,8 +555,8 @@ export function RegistrationForm() {
                   onCheckedChange={(checked) => handleInputChange("termsAccepted", checked as boolean)}
                 />
                 <Label htmlFor="termsAccepted" className="text-sm leading-relaxed">
-                  I accept the terms and conditions of the Land Rover Festival Tanzania 2025{" "}
-                  <span className="text-destructive">*</span>
+                  I accept the terms and conditions of the Land Rover Festival in Iringa, Tanzania{" "}
+                   <span className="text-destructive">*</span>
                 </Label>
               </div>
               <div className="flex items-start space-x-2">
@@ -544,7 +566,7 @@ export function RegistrationForm() {
                   onCheckedChange={(checked) => handleInputChange("insuranceConfirmed", checked as boolean)}
                 />
                 <Label htmlFor="insuranceConfirmed" className="text-sm leading-relaxed">
-                  I confirm that my vehicle has comprehensive insurance coverage for off-road activities{" "}
+                  I confirm that my vehicle has valid insurance coverage for the duration of the event{" "}
                   <span className="text-destructive">*</span>
                 </Label>
               </div>
@@ -556,6 +578,17 @@ export function RegistrationForm() {
                 />
                 <Label htmlFor="safetyAcknowledged" className="text-sm leading-relaxed">
                   I acknowledge the risks involved in off-road driving and agree to follow all safety guidelines{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+              </div>
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="mediaConsent"
+                  checked={formData.mediaConsent}
+                  onCheckedChange={(checked) => handleInputChange("mediaConsent", checked as boolean)}
+                />
+                <Label htmlFor="mediaConsent" className="text-sm leading-relaxed">
+                  I give consent for my images/media to be captured and used for public purposes{" "}
                   <span className="text-destructive">*</span>
                 </Label>
               </div>

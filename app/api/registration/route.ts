@@ -10,21 +10,15 @@ export async function POST(request: NextRequest) {
       phone,
       vehicleModel,
       vehicleYear,
-      licensePlate,
+      // removed: licensePlate,
       registrationNumber,
       ...otherData
     } = body
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !phone || !vehicleModel || !vehicleYear || !licensePlate) {
+    if (!firstName || !lastName || !email || !phone || !vehicleModel || !vehicleYear) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
-
-    // Here you would typically:
-    // 1. Save to database
-    // 2. Send confirmation email
-    // 3. Generate PDF
-    // 4. Send notifications to organizers
 
     // For now, we'll just log the registration
     console.log("Vehicle registration:", {
@@ -33,7 +27,7 @@ export async function POST(request: NextRequest) {
       email,
       phone,
       vehicle: `${vehicleYear} ${vehicleModel}`,
-      licensePlate,
+      // removed: licensePlate,
       timestamp: new Date().toISOString(),
       ...otherData,
     })
