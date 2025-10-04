@@ -5,6 +5,7 @@ import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import "./globals.css"
 import { Suspense } from "react"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,6 +39,7 @@ export default function RootLayout({
           <Suspense>{children}</Suspense>
         </main>
         <Footer />
+        <Toaster />
         {/* Floating WhatsApp Chat Button */}
         <a
           href="https://wa.me/255763652641"

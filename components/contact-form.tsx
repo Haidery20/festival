@@ -44,35 +44,33 @@ export function ContactForm() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+    // Basic client-side validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.subject || !formData.message || !formData.inquiryType) {
+      toast({ title: "Please fill in all required fields.", variant: "destructive" })
+      setIsSubmitting(false)
+      return
+    }
 
-      // Here you would typically send the data to your API
-      console.log("Contact form submitted:", formData)
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to send message")
+      }
 
       setIsSubmitted(true)
-      toast({
-        title: "Message sent successfully!",
-        description: "We'll get back to you within 24 hours.",
-      })
+      toast({ title: "Message sent successfully!", description: "We'll get back to you within 24 hours." })
 
       // Reset form
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        subject: "",
-        message: "",
-        inquiryType: "",
-      })
-    } catch (error) {
-      toast({
-        title: "Failed to send message",
-        description: "Please try again or contact us directly.",
-        variant: "destructive",
-      })
+      setFormData({ firstName: "", lastName: "", email: "", phone: "", subject: "", message: "", inquiryType: "" })
+    } catch (error: any) {
+      toast({ title: "Failed to send message", description: error?.message || "Please try again or contact us directly.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -156,7 +154,7 @@ export function ContactForm() {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
-                placeholder="+255 123 456 789"
+                placeholder="+255 763 652 641"
                 className="border-border focus:border-primary"
               />
             </div>
