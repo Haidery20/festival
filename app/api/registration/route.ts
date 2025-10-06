@@ -1,7 +1,63 @@
 import { type NextRequest, NextResponse } from "next/server"
 import nodemailer from "nodemailer"
+import fs from "fs"
+import path from "path"
 
 export const runtime = "nodejs"
+
+// Simple file-based storage for registered emails
+const REGISTRATIONS_FILE = path.join(process.cwd(), "registrations.json")
+
+// Function to check if email is already registered
+async function isEmailRegistered(email: string): Promise<boolean> {
+  try {
+    // Create the file if it doesn't exist
+    if (!fs.existsSync(REGISTRATIONS_FILE)) {
+      fs.writeFileSync(REGISTRATIONS_FILE, JSON.stringify({ emails: [] }))
+      return false
+    }
+    
+    // Read existing registrations
+    const data = fs.readFileSync(REGISTRATIONS_FILE, 'utf8')
+    const registrations = JSON.parse(data) as RegistrationsData
+    
+    // Check if email exists (case insensitive)
+    return registrations.emails.some((registeredEmail: string) => 
+      registeredEmail.toLowerCase() === email.toLowerCase()
+    )
+  } catch (error) {
+    console.error("Error checking email registration:", error)
+    return false // Fail open if there's an error reading the file
+  }
+}
+
+// Define the registration data structure
+interface RegistrationsData {
+  emails: string[];
+}
+
+// Function to save a new registered email
+async function saveRegisteredEmail(email: string): Promise<void> {
+  try {
+    let registrations: RegistrationsData = { emails: [] }
+    
+    // Read existing registrations if file exists
+    if (fs.existsSync(REGISTRATIONS_FILE)) {
+      const data = fs.readFileSync(REGISTRATIONS_FILE, 'utf8')
+      registrations = JSON.parse(data) as RegistrationsData
+    }
+    
+    // Add new email if not already in the list
+    if (!registrations.emails.some((registeredEmail: string) => 
+      registeredEmail.toLowerCase() === email.toLowerCase()
+    )) {
+      registrations.emails.push(email)
+      fs.writeFileSync(REGISTRATIONS_FILE, JSON.stringify(registrations, null, 2))
+    }
+  } catch (error) {
+    console.error("Error saving registered email:", error)
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +77,14 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!firstName || !lastName || !email || !phone || !vehicleModel || !vehicleYear) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+    
+    // Check if email is already registered
+    if (await isEmailRegistered(email)) {
+      return NextResponse.json({ 
+        error: "This email is already registered for the festival",
+        code: "EMAIL_ALREADY_REGISTERED"
+      }, { status: 409 }) // 409 Conflict
     }
 
     // SMTP configuration
@@ -132,6 +196,9 @@ export async function POST(request: NextRequest) {
       transporter.sendMail(adminMailOptions),
       transporter.sendMail(userMailOptions),
     ])
+
+    // Save the email as registered to prevent duplicates
+    await saveRegisteredEmail(email)
 
     // Simulate processing time
     // await new Promise((resolve) => setTimeout(resolve, 2000))
