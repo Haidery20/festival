@@ -216,3 +216,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function GET() {
+  try {
+    // Initialize file if missing
+    if (!fs.existsSync(REGISTRATIONS_FILE)) {
+      fs.writeFileSync(REGISTRATIONS_FILE, JSON.stringify({ emails: [] }))
+    }
+
+    const data = fs.readFileSync(REGISTRATIONS_FILE, "utf8")
+    const registrationsData = JSON.parse(data) as { emails: string[] }
+
+    // Map saved emails to minimal registration objects for dashboard
+    const registrations = (registrationsData.emails || []).map((email, idx) => ({
+      id: String(idx + 1),
+      registration_number: "",
+      first_name: "",
+      last_name: "",
+      email,
+      phone: "",
+      vehicle_model: "",
+      vehicle_year: "",
+      model_description: "",
+      created_at: new Date().toISOString(),
+      terms_accepted: false,
+      insurance_confirmed: false,
+      safety_acknowledged: false,
+      media_consent: false,
+    }))
+
+    return NextResponse.json({ registrations }, { status: 200 })
+  } catch (error) {
+    console.error("GET /api/registration error:", error)
+    return NextResponse.json({ registrations: [] }, { status: 200 })
+  }
+}
