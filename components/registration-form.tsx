@@ -154,7 +154,16 @@ export function RegistrationForm() {
       if (response.ok) {
         setIsSubmitted(true)
         toast({ title: "Registration Successful!", description: "Your vehicle has been registered." })
-      } else throw new Error("Registration failed")
+      } else if (response.status === 409) {
+        let errMsg = "This email is already registered for the festival"
+        try {
+          const data = await response.json()
+          if (data?.error) errMsg = data.error
+        } catch {}
+        toast({ title: "Already Registered", description: errMsg, variant: "destructive" })
+      } else {
+        throw new Error("Registration failed")
+      }
     } catch {
       toast({ title: "Registration Failed", description: "Please try again later.", variant: "destructive" })
     } finally {
