@@ -1,3 +1,4 @@
+"use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
@@ -7,8 +8,28 @@ import Image from "next/image"
 import Autoplay from "embla-carousel-autoplay"
 import { PartnersCarousel } from "@/components/partners-carousel"
 import { HeroCarousel } from "@/components/hero-carousel"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 export default function HomePage() {
+  const router = useRouter()
+
+  // If a Supabase auth fragment is present, forward to /login to handle session + password setup
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const hash = window.location.hash || ""
+    if (hash && /access_token=/.test(hash)) {
+      try {
+        // Preserve the hash while changing path to /login
+        const next = `/login${hash}`
+        router.replace(next)
+      } catch {
+        // Fallback: hard redirect
+        window.location.href = `/login${hash}`
+      }
+    }
+  }, [])
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
