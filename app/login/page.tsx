@@ -6,9 +6,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
+import { getSupabaseBrowserClient } from "@/lib/supabase"
+
 export default function LoginPage() {
   const router = useRouter()
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,19 +20,18 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
+      const supabase = getSupabaseBrowserClient()
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+      if (authError) {
+        setError(authError.message || "Invalid credentials")
+      } else if (data.session) {
         router.push("/dashboard")
       } else {
-        setError(data.message || "Invalid credentials")
+        setError("Login failed. No session returned.")
       }
-    } catch (err) {
-      setError("Failed to login. Please try again.")
+    } catch (err: any) {
+      const message = err?.message || "Failed to login. Please check Supabase configuration and try again."
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -43,16 +44,17 @@ export default function LoginPage() {
           <div className="flex justify-center">
             <img src="/festivallogo.svg" alt="Festival Logo" className="h-12 w-auto" />
           </div>
-          <CardTitle className="text-lg text-center">Admin Login</CardTitle>
+          <CardTitle className="text-lg text-center">Sign in</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Username</label>
+              <label className="text-sm font-medium text-gray-700">Email</label>
               <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
                 required
               />
             </div>

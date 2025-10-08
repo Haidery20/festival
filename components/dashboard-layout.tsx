@@ -17,6 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js"
 
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: Home },
@@ -32,6 +34,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [notifCount, setNotifCount] = useState(0)
+  const [displayName, setDisplayName] = useState<string>("Land Rover Festival")
   useEffect(() => {
     let mounted = true
     const poll = async () => {
@@ -47,14 +50,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const id = setInterval(poll, 10000)
     return () => { mounted = false; clearInterval(id) }
   }, [])
-  const username = typeof document !== "undefined"
-    ? document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("dashboard_user="))
-        ?.split("=")[1]
-    : undefined
-
-  const displayName = username || "Land Rover Festival"
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient()
+    const applyUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setDisplayName(user.email || (user.user_metadata as any)?.name || "User")
+      } else {
+        setDisplayName("Land Rover Festival")
+      }
+    }
+    applyUser()
+    const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      if (session?.user) {
+        setDisplayName(session.user.email || (session.user.user_metadata as any)?.name || "User")
+      } else {
+        setDisplayName("Land Rover Festival")
+      }
+    })
+    return () => { sub.subscription.unsubscribe() }
+  }, [])
   const initials = (displayName || "U").split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()
 
   return (
@@ -102,7 +117,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/support")}>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { document.cookie = "dashboard_user=; Max-Age=0; path=/"; router.push("/") }}>Sign out</DropdownMenuItem>
+              <DropdownMenuItem onClick={async () => { const supabase = getSupabaseBrowserClient(); await supabase.auth.signOut(); router.push("/") }}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
