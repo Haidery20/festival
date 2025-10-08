@@ -103,7 +103,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" className="rounded-full p-0">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src="/placeholder.svg?height=32&width=32" />
                   <AvatarFallback>{initials}</AvatarFallback>
@@ -113,11 +113,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>Profile</DropdownMenuItem>
+              -               <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>Profile</DropdownMenuItem>
+              +               <DropdownMenuItem onClick={() => router.push("/dashboard/settings?tab=profile")}>Profile</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/support")}>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={async () => { const supabase = getSupabaseBrowserClient(); await supabase.auth.signOut(); router.push("/") }}>Sign out</DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={async () => {
+                  const supabase = getSupabaseBrowserClient()
+                  await supabase.auth.signOut()
+                  router.push("/")
+                }}
+              >
+                Sign out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

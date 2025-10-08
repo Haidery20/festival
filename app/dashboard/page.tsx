@@ -46,6 +46,7 @@ import * as XLSX from "xlsx"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
 
 // Sample data
  type Registration = {
@@ -83,6 +84,7 @@ import { useToast } from "@/hooks/use-toast"
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<"all" | "verified" | "pending">("all")
 
   // Read username from cookie for header display
   const username = typeof document !== "undefined"
@@ -92,6 +94,7 @@ import { useToast } from "@/hooks/use-toast"
         ?.split("=")[1]
     : undefined
   const displayName = username || "Land Rover Festival"
+  const initials = (displayName || "LF").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
 
   useEffect(() => {
     async function fetchRegistrations() {
@@ -282,13 +285,18 @@ import { useToast } from "@/hooks/use-toast"
 
   const filteredRegistrations = registrations.filter((reg) => {
     const query = searchQuery.toLowerCase()
-    return (
+    const matchesQuery =
       reg.registration_number.toLowerCase().includes(query) ||
       reg.first_name.toLowerCase().includes(query) ||
       reg.last_name.toLowerCase().includes(query) ||
       reg.email.toLowerCase().includes(query) ||
       reg.vehicle_model.toLowerCase().includes(query)
-    )
+
+    const isVerified = reg.terms_accepted && reg.insurance_confirmed
+    const matchesStatus =
+      filterStatus === "all" ? true : filterStatus === "verified" ? isVerified : !isVerified
+
+    return matchesQuery && matchesStatus
   })
 
   const totalRegistrations = registrations.length
@@ -338,14 +346,14 @@ import { useToast } from "@/hooks/use-toast"
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="h-16 border-b border-gray-200 bg-white px-6 flex items-center justify-between">
+      <header className="min-h-16 sm:h-16 border-b border-gray-200 bg-white px-4 sm:px-6 flex flex-col sm:flex-row gap-3 sm:gap-0 items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             {/* Festival logo replaces the previous Workflow icon */}
             <img src="/festivallogo.svg" alt="Festival Logo" className="h-8 w-auto" />
             <span className="font-semibold text-gray-900">{displayName}</span>
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 hidden sm:block">
             <span>Dashboard</span> <span className="mx-1">/</span> <span>Registrations</span>
           </div>
         </div>
@@ -355,7 +363,7 @@ import { useToast } from "@/hooks/use-toast"
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search registrations..."
-              className="pl-10 w-80 bg-gray-50 border-gray-200 focus:bg-white"
+              className="pl-10 w-full sm:w-80 bg-gray-50 border-gray-200 focus:bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -369,18 +377,28 @@ import { useToast } from "@/hooks/use-toast"
               <Button variant="ghost" size="icon">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                  <AvatarFallback>AE</AvatarFallback>
+                  {/* Use dynamic initials if available; fallback to initials */}
+                  <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Alex Evans</DropdownMenuLabel>
+              <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Support</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/settings?tab=profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/support")}>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">Sign out</DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={async () => {
+                  const supabase = getSupabaseBrowserClient()
+                  await supabase.auth.signOut()
+                  router.push("/")
+                }}
+              >
+                Sign out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -388,7 +406,7 @@ import { useToast } from "@/hooks/use-toast"
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-60 border-r border-gray-200 bg-white h-[calc(100vh-4rem)] overflow-y-auto">
+        <aside className="hidden sm:block w-60 border-r border-gray-200 bg-white h-[calc(100vh-4rem)] overflow-y-auto">
           <div className="p-4">
             <div className="relative mb-6">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -429,7 +447,7 @@ import { useToast } from "@/hooks/use-toast"
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 bg-gray-50 flex flex-col min-h-[calc(100vh-4rem)]">
+        <main className="flex-1 p-4 sm:p-8 bg-gray-50 flex flex-col min-h-[calc(100vh-4rem)]">
           {/* Quick Actions Bar */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
@@ -450,11 +468,11 @@ import { useToast } from "@/hooks/use-toast"
                     <DropdownMenuItem onClick={() => setSelectedPeriod("Last 90 days")}>Last 90 days</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button variant="outline" onClick={() => router.push("/dashboard/analytics")} className="gap-2 bg-transparent">
+                <Button variant="outline" onClick={() => router.push("/dashboard/analytics")} className="gap-2 bg-transparent w-full sm:w-auto">
                   <BarChart3 className="w-4 h-4" />
                   View Report
                 </Button>
-                <Button onClick={exportToExcel}>
+                <Button onClick={exportToExcel} className="w-full sm:w-auto">
                   <Download className="w-4 h-4 mr-2" />
                   Export Data
                 </Button>
@@ -544,11 +562,20 @@ import { useToast } from "@/hooks/use-toast"
                       <CardDescription>Complete list of event registrations from your website</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <Filter className="w-4 h-4 mr-2" />
-                        Filter
-                      </Button>
-                      <Button variant="outline" size="sm">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Filter className="w-4 h-4 mr-2" />
+                            Filter
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setFilterStatus("all")}>All</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterStatus("verified")}>Verified</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setFilterStatus("pending")}>Pending</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button variant="outline" size="sm" onClick={() => { setFilterStatus("all"); setSearchQuery("") }}>
                         <Eye className="w-4 h-4 mr-2" />
                         View All
                       </Button>
@@ -565,69 +592,71 @@ import { useToast } from "@/hooks/use-toast"
                         : "No registrations yet. Waiting for submissions from your website."}
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="font-medium text-gray-700">Reg. Number</TableHead>
-                          <TableHead className="font-medium text-gray-700">Name</TableHead>
-                          <TableHead className="font-medium text-gray-700">Email</TableHead>
-                          <TableHead className="font-medium text-gray-700">Phone</TableHead>
-                          <TableHead className="font-medium text-gray-700">Vehicle</TableHead>
-                          <TableHead className="font-medium text-gray-700">Date</TableHead>
-                          <TableHead className="font-medium text-gray-700">Status</TableHead>
-                          <TableHead className="font-medium text-gray-700 w-12"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredRegistrations.map((registration) => (
-                          <TableRow key={registration.id} className="hover:bg-gray-50">
-                            <TableCell className="font-mono text-sm">{registration.registration_number}</TableCell>
-                            <TableCell className="font-medium">
-                              {registration.first_name} {registration.last_name}
-                            </TableCell>
-                            <TableCell className="text-gray-600">{registration.email}</TableCell>
-                            <TableCell className="text-gray-600">{registration.phone}</TableCell>
-                            <TableCell className="text-gray-600">
-                              {registration.vehicle_year} {registration.vehicle_model}
-                            </TableCell>
-                            <TableCell className="text-gray-600">
-                              {new Date(registration.created_at).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              {registration.terms_accepted && registration.insurance_confirmed ? (
-                                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Verified
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Pending
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="w-8 h-8">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => viewDetails(registration)}>View Details</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => sendEmail(registration)}>Send Email</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => downloadInfo(registration)}>Download Info</DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-red-600" onClick={() => deleteRegistration(registration)}>
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
+                    <div className="overflow-x-auto">
+                      <Table className="min-w-[900px]">
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="font-medium text-gray-700">Reg. Number</TableHead>
+                            <TableHead className="font-medium text-gray-700">Name</TableHead>
+                            <TableHead className="font-medium text-gray-700">Email</TableHead>
+                            <TableHead className="font-medium text-gray-700">Phone</TableHead>
+                            <TableHead className="font-medium text-gray-700">Vehicle</TableHead>
+                            <TableHead className="font-medium text-gray-700">Date</TableHead>
+                            <TableHead className="font-medium text-gray-700">Status</TableHead>
+                            <TableHead className="font-medium text-gray-700 w-12"></TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredRegistrations.map((registration) => (
+                            <TableRow key={registration.id} className="hover:bg-gray-50">
+                              <TableCell className="font-mono text-sm">{registration.registration_number}</TableCell>
+                              <TableCell className="font-medium">
+                                {registration.first_name} {registration.last_name}
+                              </TableCell>
+                              <TableCell className="text-gray-600">{registration.email}</TableCell>
+                              <TableCell className="text-gray-600">{registration.phone}</TableCell>
+                              <TableCell className="text-gray-600">
+                                {registration.vehicle_year} {registration.vehicle_model}
+                              </TableCell>
+                              <TableCell className="text-gray-600">
+                                {new Date(registration.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                {registration.terms_accepted && registration.insurance_confirmed ? (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Verified
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    Pending
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="w-8 h-8">
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => viewDetails(registration)}>View Details</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => sendEmail(registration)}>Send Email</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => downloadInfo(registration)}>Download Info</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-red-600" onClick={() => deleteRegistration(registration)}>
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>

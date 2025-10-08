@@ -1,659 +1,430 @@
 "use client"
 
-import { useState } from "react"
-import {
-  Save,
-  Bell,
-  Shield,
-  CreditCard,
-  Smartphone,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Trash2,
-  Download,
-  Upload,
-  Users,
-  UserPlus,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useMemo } from "react"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect } from "react"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
+import { UserPlus, Trash2 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 
 export default function SettingsPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: false,
-    sms: false,
-    workflowSuccess: true,
-    workflowFailure: true,
-    weeklyReport: true,
-    securityAlerts: true,
-  })
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [timezone, setTimezone] = useState("UTC")
+  const [saving, setSaving] = useState(false)
+  const [darkMode, setDarkMode] = useState(false)
+  const [notificationsEmail, setNotificationsEmail] = useState(true)
+  const [notificationsSms, setNotificationsSms] = useState(false)
 
-  // Users & Roles state and helpers
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; activated?: boolean; password?: string }>>([
-    { id: "u-1", name: "Alex Evans", email: "alex@company.com", role: "Admin", activated: true },
-    { id: "u-2", name: "Jamie Lee", email: "jamie@company.com", role: "Manager", activated: false },
-  ])
-  const roles = ["Admin", "Manager", "Analyst", "Viewer"]
-  const [newName, setNewName] = useState("")
-  const [newEmail, setNewEmail] = useState("")
-  const [newRole, setNewRole] = useState<string>("Viewer")
-  const [newPassword, setNewPassword] = useState("")
+  // Admin: users management state
+  const [users, setUsers] = useState<ManagedUser[]>([])
+  const [newUserName, setNewUserName] = useState("")
+  const [newUserEmail, setNewUserEmail] = useState("")
+  const [newUserRole, setNewUserRole] = useState<Role>("Viewer")
+  const [inviting, setInviting] = useState(false)
+  const [lastInviteLink, setLastInviteLink] = useState<string | null>(null)
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null)
+  const [roleUpdatingId, setRoleUpdatingId] = useState<number | null>(null)
+  const [removingId, setRemovingId] = useState<number | null>(null)
+  const [adminMessage, setAdminMessage] = useState<string | null>(null)
 
-  const addUser = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) return
-    const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}`
-    setUsers((prev) => [...prev, { id, name: newName.trim(), email: newEmail.trim(), role: newRole, activated: false, password: newPassword }])
-    setNewName("")
-    setNewEmail("")
-    setNewPassword("")
-    setNewRole("Viewer")
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("adminUsers")
+      if (raw) {
+        const parsed = JSON.parse(raw) as ManagedUser[]
+        if (Array.isArray(parsed)) {
+          setUsers(parsed)
+        }
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("adminUsers", JSON.stringify(users))
+    } catch {}
+  }, [users])
+
+  const addUser = async () => {
+    const name = newUserName.trim()
+    const email = newUserEmail.trim()
+    if (!name || !email) return
+
+    setInviting(true)
+    setInviteMessage(null)
+    setLastInviteLink(null)
+    try {
+      const res = await fetch("/api/auth/admin/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, role: newUserRole }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setInviteMessage(data?.error || "Failed to send invite")
+      } else if (data?.invited) {
+        if (data?.emailSent) {
+          setInviteMessage(`Invitation email sent to ${email}`)
+        } else if (data?.link) {
+          setInviteMessage("Invitation created. Share the link below.")
+          setLastInviteLink(data.link as string)
+        } else {
+          setInviteMessage("Invitation created.")
+        }
+        // Reflect in local UI list
+        const id = Date.now()
+        setUsers((prev) => [...prev, { id, name, email, role: newUserRole }])
+        // Reset inputs
+        setNewUserName("")
+        setNewUserEmail("")
+        setNewUserRole("Viewer")
+      } else {
+        setInviteMessage("Invite could not be created")
+      }
+    } catch (e: any) {
+      setInviteMessage(e?.message || "Unexpected error")
+    } finally {
+      setInviting(false)
+    }
   }
 
-  const updateUserRole = (id: string, role: string) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)))
+  const updateUserRole = async (id: number, role: Role) => {
+    const target = users.find((u) => u.id === id)
+    if (!target) return
+    setRoleUpdatingId(id)
+    setAdminMessage(null)
+    try {
+      const res = await fetch("/api/auth/admin/update-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: target.email, role }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setAdminMessage(data?.error || "Failed to update role")
+      } else {
+        setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role } : u)))
+        setAdminMessage(`Role updated for ${target.email} → ${role}`)
+      }
+    } catch (e: any) {
+      setAdminMessage(e?.message || "Unexpected error updating role")
+    } finally {
+      setRoleUpdatingId(null)
+    }
   }
 
-  const removeUser = (id: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id))
+  const removeUser = async (id: number) => {
+    const target = users.find((u) => u.id === id)
+    if (!target) return
+    setRemovingId(id)
+    setAdminMessage(null)
+    try {
+      const res = await fetch("/api/auth/admin/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: target.email }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setAdminMessage(data?.error || "Failed to remove user")
+      } else {
+        setUsers((prev) => prev.filter((u) => u.id !== id))
+        setAdminMessage(`Removed ${target.email}`)
+      }
+    } catch (e: any) {
+      setAdminMessage(e?.message || "Unexpected error removing user")
+    } finally {
+      setRemovingId(null)
+    }
   }
 
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotifications((prev) => ({ ...prev, [key]: value }))
+  const initials = useMemo(() => {
+    const f = firstName?.trim()?.charAt(0) || ""
+    const l = lastName?.trim()?.charAt(0) || ""
+    const candidate = `${f}${l}`.toUpperCase()
+    return candidate || "LF"
+  }, [firstName, lastName])
+
+  function handleSaveProfile() {
+    setSaving(true)
+    setTimeout(() => {
+      setSaving(false)
+    }, 600)
+  }
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialTab = (searchParams.get("tab") as "profile" | "preferences" | "security" | "admin" | null) || "profile"
+  const [activeTab, setActiveTab] = useState<"profile" | "preferences" | "security" | "admin">(initialTab)
+
+  useEffect(() => {
+    const next = (searchParams.get("tab") as "profile" | "preferences" | "security" | "admin" | null) || "profile"
+    setActiveTab(next)
+  }, [searchParams])
+
+  const onTabChange = (tab: "profile" | "preferences" | "security" | "admin") => {
+    setActiveTab(tab)
+    const url = new URL(window.location.href)
+    url.searchParams.set("tab", tab)
+    router.push(url.pathname + "?" + url.searchParams.toString())
   }
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="px-4 sm:px-6 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
-            <p className="text-gray-600 mt-1">Manage your account preferences and configuration</p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+          <p className="text-gray-600">Manage your profile and preferences</p>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
-            <TabsTrigger value="preferences">Preferences</TabsTrigger>
-            <TabsTrigger value="users" className="gap-2">
-              <Users className="w-4 h-4" />
-              Users & Roles
-            </TabsTrigger>
+        {/* Tabs */}
+        <Tabs value={activeTab} className="w-full">
+          <TabsList className="flex w-full flex-nowrap gap-2 overflow-x-auto">
+            <TabsTrigger value="profile" onClick={() => onTabChange("profile")}>Profile</TabsTrigger>
+            <TabsTrigger value="preferences" onClick={() => onTabChange("preferences")}>Preferences</TabsTrigger>
+            <TabsTrigger value="security" onClick={() => onTabChange("security")}>Security</TabsTrigger>
+            <TabsTrigger value="admin" onClick={() => onTabChange("admin")}>Admin</TabsTrigger>
           </TabsList>
 
-          {/* Users & Roles */}
-          <TabsContent value="users" className="space-y-6">
+          <TabsContent value="profile" className="mt-6">
             <Card className="border-gray-200">
               <CardHeader>
-                <CardTitle>Team & Access</CardTitle>
-                <CardDescription>Add assistants and assign roles for monitoring</CardDescription>
+                <CardTitle>Profile</CardTitle>
+                <CardDescription>Update your personal information</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Add User Form */}
-                <form onSubmit={addUser} className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <div className="space-y-2 md:col-span-1">
-                    <Label htmlFor="user-name">Name</Label>
-                    <Input id="user-name" placeholder="Full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2 md:col-span-1">
-                    <Label htmlFor="user-email">Email</Label>
-                    <Input id="user-email" type="email" placeholder="name@company.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-                  </div>
-                   <div className="space-y-2 md:col-span-1">
-                     <Label htmlFor="user-password">Password</Label>
-                     <Input id="user-password" type="password" placeholder="Create a password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                   </div>
-                   <div className="space-y-2">
-                     <Label htmlFor="user-role">Role</Label>
-                     <Select value={newRole} onValueChange={(v) => setNewRole(v)}>
-                       <SelectTrigger id="user-role">
-                         <SelectValue placeholder="Select a role" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         {roles.map((r) => (
-                           <SelectItem key={r} value={r}>{r}</SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <div className="flex items-end md:col-span-1">
-                     <Button type="submit" className="w-full gap-2">
-                       <UserPlus className="w-4 h-4" />
-                       Add User
-                     </Button>
-                   </div>
-                 </form>
-
-                {/* Users List */}
-                <div className="space-y-3">
-                  <h3 className="font-medium text-gray-900">Team Members</h3>
-                  <div className="space-y-2">
-                    {users.length === 0 ? (
-                      <p className="text-sm text-gray-600">No team members yet. Add users above to grant access.</p>
-                    ) : (
-                      users.map((u) => (
-                         <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border rounded-md p-3">
-                           <div className="space-y-1">
-                             <div className="flex items-center gap-2">
-                               <span className="font-medium text-gray-900">{u.name}</span>
-                               <Badge variant="outline">{u.role}</Badge>
-                             </div>
-                             <div className="text-sm text-gray-600">{u.email}</div>
-                           </div>
-                           <div className="flex items-center gap-3">
-                             <div className="flex items-center gap-2">
-                               <Label htmlFor={`activate-${u.id}`}>Activate</Label>
-                               <Switch id={`activate-${u.id}`} checked={!!u.activated} onCheckedChange={(val) => setUsers((prev) => prev.map((usr) => usr.id === u.id ? { ...usr, activated: val } : usr))} />
-                             </div>
-                             <Select value={u.role} onValueChange={(v) => updateUserRole(u.id, v)}>
-                               <SelectTrigger className="w-[160px]">
-                                 <SelectValue />
-                               </SelectTrigger>
-                               <SelectContent>
-                                 {roles.map((r) => (
-                                   <SelectItem key={r} value={r}>{r}</SelectItem>
-                                 ))}
-                               </SelectContent>
-                             </Select>
-                             <Button variant="outline" className="gap-2" onClick={() => removeUser(u.id)}>
-                               <Trash2 className="w-4 h-4" />
-                               Remove
-                             </Button>
-                           </div>
-                         </div>
-                       ))
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="profile" className="space-y-6">
-            <Card className="border-gray-200">
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your personal information and profile settings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center gap-6">
-                  <Avatar className="w-20 h-20">
-                    <AvatarImage src="/placeholder.svg?height=80&width=80" />
-                    <AvatarFallback className="text-lg">AE</AvatarFallback>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-6">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src="/placeholder.svg" />
+                    <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
-                  <div className="space-y-2">
-                    <Button variant="outline" className="gap-2 bg-transparent">
-                      <Upload className="w-4 h-4" />
-                      Upload Photo
-                    </Button>
-                    <p className="text-sm text-gray-600">JPG, PNG or GIF. Max size 2MB.</p>
+                  <div>
+                    <p className="text-sm text-gray-600">This avatar is generated from your initials.</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" defaultValue="Alex" />
+                    <Label htmlFor="firstName">First name</Label>
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" defaultValue="Evans" />
+                    <Label htmlFor="lastName">Last name</Label>
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <Input id="timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" type="email" defaultValue="alex@company.com" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
-                </div>
-
-                <div className="space-y-2 hidden">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    placeholder="Tell us about yourself..."
-                    defaultValue="Product manager passionate about automation and workflow optimization."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select defaultValue="pst">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pst">Pacific Standard Time (PST)</SelectItem>
-                      <SelectItem value="est">Eastern Standard Time (EST)</SelectItem>
-                      <SelectItem value="cst">Central Standard Time (CST)</SelectItem>
-                      <SelectItem value="mst">Mountain Standard Time (MST)</SelectItem>
-                      <SelectItem value="utc">Coordinated Universal Time (UTC)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button className="gap-2">
-                    <Save className="w-4 h-4" />
-                    Save Changes
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                  <Button onClick={handleSaveProfile} disabled={saving} className="w-full sm:w-auto">
+                    {saving ? "Saving..." : "Save Profile"}
                   </Button>
+                  <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="notifications" className="space-y-6">
+          <TabsContent value="preferences" className="mt-6">
             <Card className="border-gray-200">
               <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Choose how you want to be notified about important events</CardDescription>
+                <CardTitle>Preferences</CardTitle>
+                <CardDescription>Configure how you use the app</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent>
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Notification Channels</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Mail className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <div className="font-medium">Email Notifications</div>
-                          <div className="text-sm text-gray-600">Receive notifications via email</div>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={notifications.email}
-                        onCheckedChange={(value) => handleNotificationChange("email", value)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Bell className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <div className="font-medium">Push Notifications</div>
-                          <div className="text-sm text-gray-600">Receive browser push notifications</div>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={notifications.push}
-                        onCheckedChange={(value) => handleNotificationChange("push", value)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Smartphone className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <div className="font-medium">SMS Notifications</div>
-                          <div className="text-sm text-gray-600">Receive text message alerts</div>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={notifications.sms}
-                        onCheckedChange={(value) => handleNotificationChange("sms", value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Event Notifications</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Workflow Success</div>
-                        <div className="text-sm text-gray-600">When workflows complete successfully</div>
-                      </div>
-                      <Switch
-                        checked={notifications.workflowSuccess}
-                        onCheckedChange={(value) => handleNotificationChange("workflowSuccess", value)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Workflow Failure</div>
-                        <div className="text-sm text-gray-600">When workflows fail or encounter errors</div>
-                      </div>
-                      <Switch
-                        checked={notifications.workflowFailure}
-                        onCheckedChange={(value) => handleNotificationChange("workflowFailure", value)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Weekly Reports</div>
-                        <div className="text-sm text-gray-600">Weekly summary of workflow performance</div>
-                      </div>
-                      <Switch
-                        checked={notifications.weeklyReport}
-                        onCheckedChange={(value) => handleNotificationChange("weeklyReport", value)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Security Alerts</div>
-                        <div className="text-sm text-gray-600">Important security and account notifications</div>
-                      </div>
-                      <Switch
-                        checked={notifications.securityAlerts}
-                        onCheckedChange={(value) => handleNotificationChange("securityAlerts", value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Button className="gap-2">
-                    <Save className="w-4 h-4" />
-                    Save Preferences
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security" className="space-y-6">
-            <Card className="border-gray-200">
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>Manage your account security and authentication</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Password</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Current Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="currentPassword"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter current password"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">New Password</Label>
-                      <Input id="newPassword" type="password" placeholder="Enter new password" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                      <Input id="confirmPassword" type="password" placeholder="Confirm new password" />
-                    </div>
-
-                    <Button variant="outline" className="gap-2 bg-transparent">
-                      <Lock className="w-4 h-4" />
-                      Update Password
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Two-Factor Authentication</h3>
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">Authenticator App</div>
-                      <div className="text-sm text-gray-600">Use an authenticator app for additional security</div>
+                      <p className="font-medium">Dark mode</p>
+                      <p className="text-sm text-gray-600">Use a darker color scheme</p>
                     </div>
-                    <Badge variant="secondary" className="bg-red-100 text-red-700">
-                      Disabled
-                    </Badge>
+                    <button
+                      onClick={() => setDarkMode(!darkMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${darkMode ? "bg-gray-900" : "bg-gray-300"}`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${darkMode ? "translate-x-5" : "translate-x-1"}`}
+                      />
+                    </button>
                   </div>
-                  <Button variant="outline" className="gap-2 bg-transparent">
-                    <Shield className="w-4 h-4" />
-                    Enable 2FA
-                  </Button>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Email notifications</p>
+                      <p className="text-sm text-gray-600">Receive updates by email</p>
+                    </div>
+                    <button
+                      onClick={() => setNotificationsEmail(!notificationsEmail)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationsEmail ? "bg-green-600" : "bg-gray-300"}`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${notificationsEmail ? "translate-x-5" : "translate-x-1"}`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">SMS notifications</p>
+                      <p className="text-sm text-gray-600">Receive alerts on your phone</p>
+                    </div>
+                    <button
+                      onClick={() => setNotificationsSms(!notificationsSms)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationsSms ? "bg-green-600" : "bg-gray-300"}`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${notificationsSms ? "translate-x-5" : "translate-x-1"}`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Active Sessions</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div>
-                        <div className="font-medium">Current Session</div>
-                        <div className="text-sm text-gray-600">Chrome on macOS • San Francisco, CA</div>
-                        <div className="text-xs text-gray-500">Last active: Now</div>
-                      </div>
-                      <Badge variant="secondary" className="bg-green-100 text-green-700">
-                        Current
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div>
-                        <div className="font-medium">Mobile App</div>
-                        <div className="text-sm text-gray-600">iPhone • San Francisco, CA</div>
-                        <div className="text-xs text-gray-500">Last active: 2 hours ago</div>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Revoke
-                      </Button>
-                    </div>
-                  </div>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                  <Button className="w-full sm:w-auto">Save Preferences</Button>
+                  <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="billing" className="space-y-6 hidden">
+          <TabsContent value="security" className="mt-6">
             <Card className="border-gray-200">
               <CardHeader>
-                <CardTitle>Billing & Subscription</CardTitle>
-                <CardDescription>Manage your subscription and billing information</CardDescription>
+                <CardTitle>Security</CardTitle>
+                <CardDescription>Manage your password</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Current Plan</h3>
-                  <div className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-medium text-lg">Pro Plan</div>
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                        Active
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-4">
-                      $29/month • Billed monthly • Next billing: Jan 15, 2025
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Change Plan
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Cancel Subscription
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Payment Method</h3>
-                  <div className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CreditCard className="w-5 h-5 text-gray-400" />
-                      <div className="font-medium">•••• •••• •••• 4242</div>
-                      <Badge variant="secondary">Default</Badge>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-4">Expires 12/2027</div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Update Card
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Add Payment Method
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Billing History</h3>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                      <div>
-                        <div className="font-medium">Dec 15, 2024</div>
-                        <div className="text-sm text-gray-600">Pro Plan - Monthly</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">$29.00</span>
-                        <Button variant="ghost" size="sm">
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                      <div>
-                        <div className="font-medium">Nov 15, 2024</div>
-                        <div className="text-sm text-gray-600">Pro Plan - Monthly</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">$29.00</span>
-                        <Button variant="ghost" size="sm">
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    <Label htmlFor="password">New password</Label>
+                    <Input id="password" type="password" placeholder="••••••••" />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm">Confirm password</Label>
+                    <Input id="confirm" type="password" placeholder="••••••••" />
+                  </div>
+                </div>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                  <Button className="w-full sm:w-auto">Update Password</Button>
+                  <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-
-          <TabsContent value="preferences" className="space-y-6">
+          <TabsContent value="admin" className="mt-6">
             <Card className="border-gray-200">
               <CardHeader>
-                <CardTitle>Application Preferences</CardTitle>
-                <CardDescription>Customize your application experience</CardDescription>
+                <CardTitle>Admin Access</CardTitle>
+                <CardDescription>Add users and assign roles</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent>
                 <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Appearance</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="theme">Theme</Label>
-                      <Select defaultValue="light">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="light">Light</SelectItem>
-                          <SelectItem value="dark">Dark</SelectItem>
-                          <SelectItem value="system">System</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2 md:col-span-1">
+                      <Label htmlFor="adminName">Name</Label>
+                      <Input id="adminName" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder="e.g. Alex Johnson" />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="language">Language</Label>
-                      <Select defaultValue="en">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="adminEmail">Email</Label>
+                      <Input id="adminEmail" type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="e.g. alex@example.com" />
+                    </div>
+                    <div className="space-y-2 md:col-span-1">
+                      <Label>Role</Label>
+                      <Select value={newUserRole} onValueChange={(val) => setNewUserRole(val as Role)}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="en">English</SelectItem>
-                          <SelectItem value="es">Spanish</SelectItem>
-                          <SelectItem value="fr">French</SelectItem>
-                          <SelectItem value="de">German</SelectItem>
+                          <SelectItem value="Admin">Admin</SelectItem>
+                          <SelectItem value="Editor">Editor</SelectItem>
+                          <SelectItem value="Viewer">Viewer</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Data & Privacy</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Analytics & Usage Data</div>
-                        <div className="text-sm text-gray-600">Help improve our product by sharing usage data</div>
-                      </div>
-                      <Switch defaultChecked />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Marketing Communications</div>
-                        <div className="text-sm text-gray-600">Receive product updates and marketing emails</div>
-                      </div>
-                      <Switch />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900">Data Export</h3>
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                      Export your data including workflows, logs, and account information.
-                    </p>
-                    <Button variant="outline" className="gap-2 bg-transparent">
-                      <Download className="w-4 h-4" />
-                      Export Data
+                  <div>
+                    <Button onClick={addUser} className="w-full md:w-auto" disabled={inviting}>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      {inviting ? "Inviting..." : "Add User"}
                     </Button>
                   </div>
-                </div>
 
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-900 text-red-600">Danger Zone</h3>
-                  <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                    <div className="space-y-4">
-                      <div>
-                        <div className="font-medium text-red-900">Delete Account</div>
-                        <div className="text-sm text-red-700">
-                          Permanently delete your account and all associated data. This action cannot be undone.
+                  {inviteMessage && (
+                    <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+                      <p>{inviteMessage}</p>
+                      {lastInviteLink && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <Input readOnly value={lastInviteLink} />
+                          <Button variant="outline" onClick={() => navigator.clipboard.writeText(lastInviteLink!)}>
+                            Copy link
+                          </Button>
                         </div>
-                      </div>
-                      <Button variant="destructive" className="gap-2">
-                        <Trash2 className="w-4 h-4" />
-                        Delete Account
-                      </Button>
+                      )}
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                <div className="flex justify-end">
-                  <Button className="gap-2">
-                    <Save className="w-4 h-4" />
-                    Save Preferences
-                  </Button>
+                <div className="mt-8">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((u) => (
+                          <TableRow key={u.id}>
+                            <TableCell>{u.name}</TableCell>
+                            <TableCell>{u.email}</TableCell>
+                            <TableCell>
+                              <Select value={u.role} onValueChange={(val) => updateUserRole(u.id, val as Role)}>
+                                <SelectTrigger className="w-[140px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Admin">Admin</SelectItem>
+                                  <SelectItem value="Editor">Editor</SelectItem>
+                                  <SelectItem value="Viewer">Viewer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" onClick={() => removeUser(u.id)} disabled={removingId === u.id}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                {removingId === u.id ? "Removing..." : "Remove"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -663,3 +434,6 @@ export default function SettingsPage() {
     </DashboardLayout>
   )
 }
+
+type Role = "Admin" | "Editor" | "Viewer"
+interface ManagedUser { id: number; name: string; email: string; role: Role }
