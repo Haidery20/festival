@@ -13,6 +13,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { UserPlus, Trash2 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
 
 export default function SettingsPage() {
   const [firstName, setFirstName] = useState("")
@@ -24,7 +25,8 @@ export default function SettingsPage() {
   const [darkMode, setDarkMode] = useState(false)
   const [notificationsEmail, setNotificationsEmail] = useState(true)
   const [notificationsSms, setNotificationsSms] = useState(false)
-
+  const [profileMessage, setProfileMessage] = useState<string | null>(null)
+  const [initialEmail, setInitialEmail] = useState<string>("")
   // Admin: users management state
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [newUserName, setNewUserName] = useState("")
@@ -155,11 +157,59 @@ export default function SettingsPage() {
     return candidate || "LF"
   }, [firstName, lastName])
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const meta: any = user.user_metadata || {}
+          setFirstName(meta.first_name || meta.firstName || "")
+          setLastName(meta.last_name || meta.lastName || "")
+          setPhone(meta.phone || "")
+          setTimezone(meta.timezone || "UTC")
+          setEmail(user.email || "")
+          setInitialEmail(user.email || "")
+        }
+      } catch (e: any) {
+        // If Supabase is not configured, show a gentle message (optional)
+        setProfileMessage(e?.message || "Unable to load profile. Please check Supabase configuration.")
+      }
+    }
+    loadProfile()
+  }, [])
+
   function handleSaveProfile() {
     setSaving(true)
-    setTimeout(() => {
-      setSaving(false)
-    }, 600)
+    setProfileMessage(null);
+    (async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const fullName = `${firstName} ${lastName}`.trim()
+        const { data, error } = await supabase.auth.updateUser({
+          // Store fields in user_metadata
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            name: fullName,
+            phone,
+            timezone,
+          },
+          // Avoid attempting email change flow for now (requires template + confirmation)
+          // Only include email if it actually changed and you want to trigger email-change
+          // email: email !== initialEmail ? email : undefined,
+        })
+        if (error) {
+          setProfileMessage(error.message || "Failed to save profile")
+        } else {
+          setProfileMessage("Profile updated successfully")
+        }
+      } catch (e: any) {
+        setProfileMessage(e?.message || "Unexpected error saving profile")
+      } finally {
+        setSaving(false)
+      }
+    })()
   }
 
   const router = useRouter()
@@ -225,7 +275,8 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled />
+                    {/* <p className="text-xs text-gray-500">To change your email, use the Security tab or contact support.</p> */}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
@@ -243,6 +294,11 @@ export default function SettingsPage() {
                   </Button>
                   <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
                 </div>
+                {profileMessage && (
+                  <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+                    {profileMessage}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

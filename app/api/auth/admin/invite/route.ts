@@ -27,13 +27,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(url, serviceRoleKey)
 
+    // Determine a safe redirect URL for invite flows
+    const siteUrlEnv = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL
+    const hdrProto = request.headers.get("x-forwarded-proto") || (process.env.NODE_ENV === "production" ? "https" : "http")
+    const hdrHost = request.headers.get("host")
+    const origin = siteUrlEnv || (hdrHost ? `${hdrProto}://${hdrHost}` : undefined)
+    // Send them to login after completing invite/password setup
+    const redirectTo = origin ? `${origin}/login` : undefined
+
     // Try to generate an invite link
     let actionLink: string | null = null
     let userId: string | null = null
 
     try {
       // Prefer the Admin generateLink invite flow
-      const { data, error } = await supabase.auth.admin.generateLink({ type: "invite", email })
+      const { data, error } = await supabase.auth.admin.generateLink({ type: "invite", email, options: { redirectTo } })
       if (error) throw error
       actionLink = data?.properties?.action_link || null
       userId = data?.user?.id || null
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
         }
       }
       userId = created?.user?.id || null
-      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({ type: "invite", email })
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({ type: "invite", email, options: { redirectTo } })
       if (linkErr) {
         return NextResponse.json({ error: linkErr.message }, { status: linkErr.status || 500 })
       }
