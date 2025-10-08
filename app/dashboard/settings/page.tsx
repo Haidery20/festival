@@ -42,22 +42,24 @@ export default function SettingsPage() {
   })
 
   // Users & Roles state and helpers
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string }>>([
-    { id: "u-1", name: "Alex Evans", email: "alex@company.com", role: "Admin" },
-    { id: "u-2", name: "Jamie Lee", email: "jamie@company.com", role: "Manager" },
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role: string; activated?: boolean; password?: string }>>([
+    { id: "u-1", name: "Alex Evans", email: "alex@company.com", role: "Admin", activated: true },
+    { id: "u-2", name: "Jamie Lee", email: "jamie@company.com", role: "Manager", activated: false },
   ])
   const roles = ["Admin", "Manager", "Analyst", "Viewer"]
   const [newName, setNewName] = useState("")
   const [newEmail, setNewEmail] = useState("")
   const [newRole, setNewRole] = useState<string>("Viewer")
+  const [newPassword, setNewPassword] = useState("")
 
   const addUser = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newName.trim() || !newEmail.trim()) return
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) return
     const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}`
-    setUsers((prev) => [...prev, { id, name: newName.trim(), email: newEmail.trim(), role: newRole }])
+    setUsers((prev) => [...prev, { id, name: newName.trim(), email: newEmail.trim(), role: newRole, activated: false, password: newPassword }])
     setNewName("")
     setNewEmail("")
+    setNewPassword("")
     setNewRole("Viewer")
   }
 
@@ -106,7 +108,7 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Add User Form */}
-                <form onSubmit={addUser} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <form onSubmit={addUser} className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div className="space-y-2 md:col-span-1">
                     <Label htmlFor="user-name">Name</Label>
                     <Input id="user-name" placeholder="Full name" value={newName} onChange={(e) => setNewName(e.target.value)} />
@@ -115,26 +117,30 @@ export default function SettingsPage() {
                     <Label htmlFor="user-email">Email</Label>
                     <Input id="user-email" type="email" placeholder="name@company.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
                   </div>
-                  <div className="space-y-2 md:col-span-1">
-                    <Label htmlFor="user-role">Role</Label>
-                    <Select value={newRole} onValueChange={(v) => setNewRole(v)}>
-                      <SelectTrigger id="user-role">
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end md:col-span-1">
-                    <Button type="submit" className="w-full gap-2">
-                      <UserPlus className="w-4 h-4" />
-                      Add User
-                    </Button>
-                  </div>
-                </form>
+                   <div className="space-y-2 md:col-span-1">
+                     <Label htmlFor="user-password">Password</Label>
+                     <Input id="user-password" type="password" placeholder="Create a password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="user-role">Role</Label>
+                     <Select value={newRole} onValueChange={(v) => setNewRole(v)}>
+                       <SelectTrigger id="user-role">
+                         <SelectValue placeholder="Select a role" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {roles.map((r) => (
+                           <SelectItem key={r} value={r}>{r}</SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   </div>
+                   <div className="flex items-end md:col-span-1">
+                     <Button type="submit" className="w-full gap-2">
+                       <UserPlus className="w-4 h-4" />
+                       Add User
+                     </Button>
+                   </div>
+                 </form>
 
                 {/* Users List */}
                 <div className="space-y-3">
@@ -144,32 +150,36 @@ export default function SettingsPage() {
                       <p className="text-sm text-gray-600">No team members yet. Add users above to grant access.</p>
                     ) : (
                       users.map((u) => (
-                        <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border rounded-md p-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-900">{u.name}</span>
-                              <Badge variant="outline">{u.role}</Badge>
-                            </div>
-                            <div className="text-sm text-gray-600">{u.email}</div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Select value={u.role} onValueChange={(v) => updateUserRole(u.id, v)}>
-                              <SelectTrigger className="w-[160px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {roles.map((r) => (
-                                  <SelectItem key={r} value={r}>{r}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button variant="outline" className="gap-2" onClick={() => removeUser(u.id)}>
-                              <Trash2 className="w-4 h-4" />
-                              Remove
-                            </Button>
-                          </div>
-                        </div>
-                      ))
+                         <div key={u.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border rounded-md p-3">
+                           <div className="space-y-1">
+                             <div className="flex items-center gap-2">
+                               <span className="font-medium text-gray-900">{u.name}</span>
+                               <Badge variant="outline">{u.role}</Badge>
+                             </div>
+                             <div className="text-sm text-gray-600">{u.email}</div>
+                           </div>
+                           <div className="flex items-center gap-3">
+                             <div className="flex items-center gap-2">
+                               <Label htmlFor={`activate-${u.id}`}>Activate</Label>
+                               <Switch id={`activate-${u.id}`} checked={!!u.activated} onCheckedChange={(val) => setUsers((prev) => prev.map((usr) => usr.id === u.id ? { ...usr, activated: val } : usr))} />
+                             </div>
+                             <Select value={u.role} onValueChange={(v) => updateUserRole(u.id, v)}>
+                               <SelectTrigger className="w-[160px]">
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {roles.map((r) => (
+                                   <SelectItem key={r} value={r}>{r}</SelectItem>
+                                 ))}
+                               </SelectContent>
+                             </Select>
+                             <Button variant="outline" className="gap-2" onClick={() => removeUser(u.id)}>
+                               <Trash2 className="w-4 h-4" />
+                               Remove
+                             </Button>
+                           </div>
+                         </div>
+                       ))
                     )}
                   </div>
                 </div>
@@ -219,7 +229,7 @@ export default function SettingsPage() {
                   <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 hidden">
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea
                     id="bio"
@@ -462,7 +472,7 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="billing" className="space-y-6">
+          <TabsContent value="billing" className="space-y-6 hidden">
             <Card className="border-gray-200">
               <CardHeader>
                 <CardTitle>Billing & Subscription</CardTitle>

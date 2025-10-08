@@ -173,8 +173,9 @@ export async function POST(request: NextRequest) {
 
     // QR code: link to digital form
     try {
-      const origin = request.nextUrl.origin
-      const qrContent = `${origin}/register?rn=${encodeURIComponent(registrationNumber)}`
+      const appBaseUrlEnv = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL
+      const baseUrl = appBaseUrlEnv ? appBaseUrlEnv.replace(/\/+$/, "") : request.nextUrl.origin
+      const qrContent = `${baseUrl}/register?rn=${encodeURIComponent(registrationNumber)}`
       const qrDataUrl = await QRCode.toDataURL(qrContent, {
         margin: 1,
         scale: 6,
@@ -380,8 +381,9 @@ export async function GET(request: NextRequest) {
 
     // QR code (GET sample)
     try {
-      const origin = request.nextUrl.origin
-      const qrContent = `${origin}/register?rn=${encodeURIComponent(sample.registrationNumber)}`
+      const appBaseUrlEnv = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL
+      const baseUrl = appBaseUrlEnv ? appBaseUrlEnv.replace(/\/+$/, "") : request.nextUrl.origin
+      const qrContent = `${baseUrl}/register?rn=${encodeURIComponent(sample.registrationNumber)}`
       const qrDataUrl = await QRCode.toDataURL(qrContent, {
         margin: 1,
         scale: 6,

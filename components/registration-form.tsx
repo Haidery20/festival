@@ -23,6 +23,52 @@ const defenderModels = [
   { value: "defender-new", label: "New Defender (2020+)" },
 ]
 
+const modelDescriptions: Record<string, { value: string; label: string }[]> = {
+  defender: defenderModels,
+  discovery: [
+    { value: "discovery-1", label: "Discovery 1 (1990–1998)" },
+    { value: "discovery-2", label: "Discovery 2 (1999–2004)" },
+    { value: "discovery-3-lr3", label: "Discovery 3 / LR3 (2005–2009)" },
+    { value: "discovery-4-lr4", label: "Discovery 4 / LR4 (2010–2016)" },
+    { value: "discovery-5", label: "Discovery 5 (2017+)" },
+  ],
+  "discovery-sport": [
+    { value: "discovery-sport-gen1", label: "Discovery Sport Gen 1 (2015–2019)" },
+    { value: "discovery-sport-gen2", label: "Discovery Sport Gen 2 (2020+)" },
+  ],
+  "range-rover": [
+    { value: "range-rover-classic", label: "Range Rover Classic (1970–1996)" },
+    { value: "range-rover-p38", label: "Range Rover P38 (1994–2002)" },
+    { value: "range-rover-l322", label: "Range Rover L322 (2002–2012)" },
+    { value: "range-rover-l405", label: "Range Rover L405 (2012–2021)" },
+    { value: "range-rover-l460", label: "Range Rover L460 (2022+)" },
+  ],
+  "range-rover-sport": [
+    { value: "range-rover-sport-l320", label: "Range Rover Sport L320 (2005–2013)" },
+    { value: "range-rover-sport-l494", label: "Range Rover Sport L494 (2013–2022)" },
+    { value: "range-rover-sport-l461", label: "Range Rover Sport L461 (2023+)" },
+  ],
+  "range-rover-evoque": [
+    { value: "evoque-gen1", label: "Evoque Gen 1 (2011–2018)" },
+    { value: "evoque-gen2", label: "Evoque Gen 2 (2019+)" },
+  ],
+  "range-rover-velar": [
+    { value: "velar-l560", label: "Velar L560 (2017+)" },
+  ],
+  freelander: [
+    { value: "freelander-1", label: "Freelander 1 (1997–2006)" },
+    { value: "freelander-2", label: "Freelander 2 (2007–2014)" },
+  ],
+  other: [
+    { value: "series-i", label: "Series I (1948–1958)" },
+    { value: "series-ii", label: "Series II (1958–1961)" },
+    { value: "series-iia", label: "Series IIA (1961–1971)" },
+    { value: "series-iii", label: "Series III (1971–1985)" },
+    { value: "santana", label: "Santana" },
+    { value: "custom", label: "Custom Build / Other" },
+  ],
+}
+
 const engineSizes = [
   { value: "2.0", label: "2.0L" },
   { value: "2.2", label: "2.2L" },
@@ -225,7 +271,7 @@ export function RegistrationForm() {
               {/* Vehicle Model */}
               <div className="space-y-2">
                 <Label>Land Rover Model <span className="text-destructive">*</span></Label>
-                <Select value={formData.vehicleModel} onValueChange={(v) => handleInputChange("vehicleModel", v)}>
+                <Select value={formData.vehicleModel} onValueChange={(v) => { handleInputChange("vehicleModel", v); handleInputChange("modelDescription", "") }}>
                   <SelectTrigger><SelectValue placeholder="Select model" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="defender">Defender</SelectItem>
@@ -258,21 +304,9 @@ export function RegistrationForm() {
                 <Select value={formData.modelDescription} onValueChange={(v) => handleInputChange("modelDescription", v)}>
                   <SelectTrigger><SelectValue placeholder="Select description" /></SelectTrigger>
                   <SelectContent>
-                    {formData.vehicleModel === "defender"
-                      ? defenderModels.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)
-                      : <>
-                          <SelectItem value="discovery-1">Discovery 1</SelectItem>
-                          <SelectItem value="discovery-2">Discovery 2</SelectItem>
-                          <SelectItem value="range-rover-classic">Range Rover Classic</SelectItem>
-                          <SelectItem value="range-rover-l322">Range Rover L322</SelectItem>
-                          <SelectItem value="range-rover-l405">Range Rover L405</SelectItem>
-                          <SelectItem value="range-rover-sport-l494">Range Rover Sport L494</SelectItem>
-                          <SelectItem value="evoque-gen1">Evoque Gen 1</SelectItem>
-                          <SelectItem value="evoque-gen2">Evoque Gen 2</SelectItem>
-                          <SelectItem value="velar">Velar</SelectItem>
-                          <SelectItem value="freelander-2">Freelander 2</SelectItem>
-                        </>
-                    }
+                    {(modelDescriptions[formData.vehicleModel] || modelDescriptions.other).map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

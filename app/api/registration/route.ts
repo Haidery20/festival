@@ -402,3 +402,220 @@ export async function GET() {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const url = new URL(request.url)
+    const id = url.searchParams.get("id")
+    const email = url.searchParams.get("email")
+    const registrationNumber = url.searchParams.get("registration_number")
+
+    const supabase = getSupabaseClient()
+
+    if (supabase) {
+      let error: any = null
+      if (id) {
+        const res = await supabase.from("registrations").delete().eq("id", id)
+        error = res.error
+      } else if (registrationNumber) {
+        const res = await supabase.from("registrations").delete().eq("registration_number", registrationNumber)
+        error = res.error
+      } else if (email) {
+        const res = await supabase.from("registrations").delete().eq("email", email)
+        error = res.error
+      } else {
+        return NextResponse.json({ error: "Missing identifier (id, registration_number, or email)" }, { status: 400 })
+      }
+
+      if (error) {
+        console.error("Supabase delete error:", error)
+        return NextResponse.json({ error: "Failed to delete registration" }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true }, { status: 200 })
+    }
+
+    // File-based fallback
+    if (!fs.existsSync(REGISTRATIONS_FILE)) {
+      fs.writeFileSync(REGISTRATIONS_FILE, JSON.stringify({ emails: [] }))
+    }
+    const raw = fs.readFileSync(REGISTRATIONS_FILE, "utf8")
+    const data = JSON.parse(raw) as { emails: string[] }
+    const emails = Array.isArray(data.emails) ? data.emails : []
+
+    let changed = false
+    if (id) {
+      const idx = Number(id) - 1
+      if (!Number.isNaN(idx) && idx >= 0 && idx < emails.length) {
+        emails.splice(idx, 1)
+        changed = true
+      }
+    } else if (email) {
+      const i = emails.findIndex((e) => e === email)
+      if (i >= 0) {
+        emails.splice(i, 1)
+        changed = true
+      }
+    } else {
+      return NextResponse.json({ error: "Missing identifier (email or id) for file-based store" }, { status: 400 })
+    }
+
+    if (changed) {
+      fs.writeFileSync(REGISTRATIONS_FILE, JSON.stringify({ emails }, null, 2))
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 })
+  } catch (error) {
+    console.error("Delete registration error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const {
+      id,
+      registration_number,
+      email,
+      // Optional overrides for PDF content if minimal data is present
+      first_name,
+      last_name,
+      phone,
+      vehicle_model,
+      vehicle_year,
+      model_description,
+      accommodation_type,
+    } = body
+
+    const supabase = getSupabaseClient()
+
+    let record: any = null
+    if (supabase) {
+      let query = supabase.from("registrations").select("*").limit(1)
+      if (id) query = query.eq("id", id)
+      else if (registration_number) query = query.eq("registration_number", registration_number)
+      else if (email) query = query.ilike("email", email)
+      else return NextResponse.json({ error: "Missing identifier (id, registration_number, or email)" }, { status: 400 })
+      const { data, error } = await query.single()
+      if (error) {
+        console.error("Supabase fetch for resend error:", error)
+        return NextResponse.json({ error: "Failed to fetch registration" }, { status: 500 })
+      }
+      record = data
+    } else {
+      // File-based fallback only has emails; construct minimal record
+      if (!email) return NextResponse.json({ error: "Email required for file-based resend" }, { status: 400 })
+      record = {
+        registration_number: registration_number || `REG-${Date.now()}`,
+        first_name: first_name || "",
+        last_name: last_name || "",
+        email,
+        phone: phone || "",
+        vehicle_model: vehicle_model || "",
+        vehicle_year: vehicle_year || "",
+        model_description: model_description || "",
+        accommodation_type: accommodation_type || "",
+      }
+    }
+
+    // SMTP configuration
+    const smtpHost = process.env.SMTP_HOST
+    const smtpPort = Number(process.env.SMTP_PORT || 587)
+    const smtpUser = process.env.SMTP_USER
+    const smtpPass = process.env.SMTP_PASS
+    const fromEmail = process.env.FROM_EMAIL || smtpUser
+    const adminEmail = process.env.ADMIN_EMAIL || "info@landroverfestival.co.tz"
+
+    const emailsEnabled = !!(smtpHost && smtpUser && smtpPass)
+    if (!emailsEnabled) {
+      return NextResponse.json({ error: "SMTP not configured" }, { status: 400 })
+    }
+
+    const securePorts = [465, 8465, 443]
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: securePorts.includes(smtpPort),
+      auth: { user: smtpUser, pass: smtpPass },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    })
+
+    // Generate PDF via internal API for attachment
+    let pdfAttachment: { filename: string; content: Buffer } | null = null
+    try {
+      const origin = request.nextUrl.origin
+      const pdfRes = await fetch(`${origin}/api/registration/pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          registrationNumber: record.registration_number,
+          firstName: record.first_name,
+          lastName: record.last_name,
+          email: record.email,
+          phone: record.phone,
+          vehicleModel: record.vehicle_model,
+          vehicleYear: record.vehicle_year,
+          modelDescription: record.model_description,
+          accommodationType: record.accommodation_type,
+        }),
+      })
+      if (pdfRes.ok) {
+        const arrayBuf = await pdfRes.arrayBuffer()
+        pdfAttachment = {
+          filename: `LandRover-Festival-Registration-${record.registration_number}.pdf`,
+          content: Buffer.from(arrayBuf),
+        }
+      }
+    } catch (err) {
+      console.warn("Resend PDF generation error:", err)
+    }
+
+    const participantName = `${record.first_name || ""} ${record.last_name || ""}`.trim()
+    const vehicleInfo = `${record.vehicle_year || ""} ${record.vehicle_model || ""}`.trim()
+
+    const adminMailOptions = {
+      from: fromEmail,
+      to: adminEmail,
+      subject: `[Resend] ${record.registration_number} — ${participantName || record.email}`,
+      replyTo: record.email,
+      html: `
+        <h2>Resent Registration</h2>
+        <p><strong>Registration Number:</strong> ${record.registration_number}</p>
+        <p><strong>Name:</strong> ${participantName || "N/A"}</p>
+        <p><strong>Email:</strong> ${record.email}</p>
+        <p><strong>Vehicle:</strong> ${vehicleInfo || "N/A"}</p>
+        <hr/>
+        <p>Resent at: ${new Date().toLocaleString()}</p>
+      `,
+    }
+
+    const userMailOptions: any = {
+      from: fromEmail,
+      to: record.email,
+      subject: `Your registration confirmation — ${record.registration_number}`,
+      html: `
+        <p>Hi ${record.first_name || "Participant"},</p>
+        <p>Here is your registration confirmation.</p>
+        <p><strong>Your registration number:</strong> ${record.registration_number}</p>
+        <p><strong>Vehicle:</strong> ${vehicleInfo || "N/A"}</p>
+        <p>We've attached your registration confirmation PDF.</p>
+        <p>If you need assistance, contact us at info@landroverfestival.co.tz.</p>
+        <p>Best regards,<br/>Land Rover Festival Tanzania Team</p>
+      `,
+    }
+    if (pdfAttachment) userMailOptions.attachments = [pdfAttachment]
+
+    await Promise.all([
+      transporter.sendMail(adminMailOptions),
+      transporter.sendMail(userMailOptions),
+    ])
+
+    return NextResponse.json({ success: true }, { status: 200 })
+  } catch (error) {
+    console.error("Resend error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

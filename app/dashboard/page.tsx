@@ -43,6 +43,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 import * as XLSX from "xlsx"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 // Sample data
  type Registration = {
@@ -55,6 +58,7 @@ import * as XLSX from "xlsx"
    vehicle_model: string
    vehicle_year: string
    model_description: string
+   accommodation_type?: string
    created_at: string
    terms_accepted: boolean
    insurance_confirmed: boolean
@@ -73,6 +77,12 @@ import * as XLSX from "xlsx"
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+
+  const router = useRouter()
+  const { toast } = useToast()
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
 
   // Read username from cookie for header display
   const username = typeof document !== "undefined"
@@ -131,11 +141,11 @@ import * as XLSX from "xlsx"
     ]
 
     const rows = registrations.map((r) => [
-      r.registration_number ?? "",
-      r.first_name ?? "",
-      r.last_name ?? "",
-      r.email ?? "",
-      r.phone ?? "",
+      r.registration_number,
+      r.first_name,
+      r.last_name,
+      r.email,
+      r.phone,
       // @ts-expect-error optional fields may exist on server records
       r.address ?? "",
       // @ts-expect-error optional fields may exist on server records
@@ -146,14 +156,13 @@ import * as XLSX from "xlsx"
       r.emergency_contact ?? "",
       // @ts-expect-error optional fields may exist on server records
       r.emergency_phone ?? "",
-      r.vehicle_model ?? "",
-      r.vehicle_year ?? "",
-      r.model_description ?? "",
+      r.vehicle_model,
+      r.vehicle_year,
+      r.model_description,
       // @ts-expect-error optional fields may exist on server records
       r.engine_size ?? "",
       // @ts-expect-error optional fields may exist on server records
       r.modifications ?? "",
-      // @ts-expect-error optional fields may exist on server records
       r.accommodation_type ?? "",
       // @ts-expect-error optional fields may exist on server records
       r.dietary_restrictions ?? "",
@@ -167,13 +176,108 @@ import * as XLSX from "xlsx"
       r.insurance_confirmed ? "Yes" : "No",
       r.safety_acknowledged ? "Yes" : "No",
       r.media_consent ? "Yes" : "No",
-      r.created_at ?? "",
+      r.created_at,
     ])
 
     const wb = XLSX.utils.book_new()
     const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
     XLSX.utils.book_append_sheet(wb, sheet, "Registrations")
     XLSX.writeFile(wb, "registrations.xlsx")
+  }
+
+  const viewDetails = (registration: Registration) => {
+    setSelectedRegistration(registration)
+    setDetailsOpen(true)
+  }
+
+  async function sendEmail(reg: Registration) {
+    setLoadingAction(reg.id || reg.email)
+    try {
+      const res = await fetch("/api/registration", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: reg.id,
+          registration_number: reg.registration_number,
+          email: reg.email,
+          first_name: reg.first_name,
+          last_name: reg.last_name,
+          phone: reg.phone,
+          vehicle_model: reg.vehicle_model,
+          vehicle_year: reg.vehicle_year,
+          model_description: reg.model_description,
+          accommodation_type: reg.accommodation_type,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast({ title: "Resend failed", description: data.error || "Unable to resend email.", variant: "destructive" })
+      } else {
+        toast({ title: "Email resent", description: `Confirmation resent to ${reg.email}.` })
+      }
+    } catch (e) {
+      toast({ title: "Resend failed", description: String(e), variant: "destructive" })
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  async function downloadInfo(reg: Registration) {
+    setLoadingAction(reg.id || reg.email)
+    try {
+      const res = await fetch("/api/registration/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          registrationNumber: reg.registration_number,
+          firstName: reg.first_name,
+          lastName: reg.last_name,
+          email: reg.email,
+          phone: reg.phone,
+          vehicleModel: reg.vehicle_model,
+          vehicleYear: reg.vehicle_year,
+          modelDescription: reg.model_description,
+          accommodationType: reg.accommodation_type,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Failed to generate PDF")
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `LandRover-Festival-Registration-${reg.registration_number}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      toast({ title: "Download started", description: "Your registration PDF is downloading." })
+    } catch (e) {
+      toast({ title: "Download failed", description: String(e), variant: "destructive" })
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  async function deleteRegistration(reg: Registration) {
+    setLoadingAction(reg.id || reg.email)
+    try {
+      const res = await fetch(`/api/registration?${new URLSearchParams({
+        id: reg.id || "",
+        email: reg.email || "",
+        registration_number: reg.registration_number || "",
+      })}`, { method: "DELETE" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to delete")
+      setRegistrations(prev => prev.filter(r => (r.id && reg.id) ? r.id !== reg.id : r.email !== reg.email))
+      toast({ title: "Deleted", description: `Registration ${reg.registration_number || reg.email} deleted.` })
+    } catch (e) {
+      toast({ title: "Delete failed", description: String(e), variant: "destructive" })
+    } finally {
+      setLoadingAction(null)
+    }
   }
 
   const filteredRegistrations = registrations.filter((reg) => {
@@ -325,7 +429,7 @@ import * as XLSX from "xlsx"
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 bg-gray-50">
+        <main className="flex-1 p-8 bg-gray-50 flex flex-col min-h-[calc(100vh-4rem)]">
           {/* Quick Actions Bar */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
@@ -346,6 +450,10 @@ import * as XLSX from "xlsx"
                     <DropdownMenuItem onClick={() => setSelectedPeriod("Last 90 days")}>Last 90 days</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button variant="outline" onClick={() => router.push("/dashboard/analytics")} className="gap-2 bg-transparent">
+                  <BarChart3 className="w-4 h-4" />
+                  View Report
+                </Button>
                 <Button onClick={exportToExcel}>
                   <Download className="w-4 h-4 mr-2" />
                   Export Data
@@ -354,7 +462,7 @@ import * as XLSX from "xlsx"
             </div>
 
             {/* Quick Action Cards */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="hidden">
               <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer border-gray-200">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -420,149 +528,15 @@ import * as XLSX from "xlsx"
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-8 flex-1">
             {/* Main Content Area */}
-            <div className="col-span-2 space-y-8">
-              {/* Charts Section */}
-              <Card className="border-gray-200">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg font-semibold">Performance Analytics</CardTitle>
-                      <CardDescription>Workflow execution trends and system metrics</CardDescription>
-                    </div>
-                    <Tabs defaultValue="workflows" className="w-auto">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="workflows">Workflows</TabsTrigger>
-                        <TabsTrigger value="sales">Sales</TabsTrigger>
-                        <TabsTrigger value="views">Views</TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                        <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
-                        <YAxis stroke="#6b7280" fontSize={12} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "white",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "8px",
-                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                          }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="workflows"
-                          stroke="#8b5cf6"
-                          fill="#8b5cf6"
-                          fillOpacity={0.1}
-                          strokeWidth={2}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="sales"
-                          stroke="#3b82f6"
-                          fill="#3b82f6"
-                          fillOpacity={0.1}
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="space-y-8">
+              {/* Charts Section removed as requested */}
 
-              {/* Workflow Status Table */}
-              <Card className="border-gray-200">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg font-semibold">Recent Workflow Runs</CardTitle>
-                      <CardDescription>Monitor your workflow executions and performance</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <Filter className="w-4 h-4 mr-2" />
-                        Filter
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-4 h-4 mr-2" />
-                        View All
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-50">
-                        <TableHead className="font-medium text-gray-700">Run ID</TableHead>
-                        <TableHead className="font-medium text-gray-700">Workflow</TableHead>
-                        <TableHead className="font-medium text-gray-700">Started</TableHead>
-                        <TableHead className="font-medium text-gray-700">Duration</TableHead>
-                        <TableHead className="font-medium text-gray-700">Status</TableHead>
-                        <TableHead className="font-medium text-gray-700">Error</TableHead>
-                        <TableHead className="font-medium text-gray-700 w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {workflowData.map((workflow) => (
-                        <TableRow key={workflow.id} className="hover:bg-gray-50">
-                          <TableCell className="font-mono text-sm">{workflow.id}</TableCell>
-                          <TableCell className="font-medium">{workflow.name}</TableCell>
-                          <TableCell className="text-gray-600">{workflow.started}</TableCell>
-                          <TableCell className="text-gray-600">{workflow.duration}</TableCell>
-                          <TableCell>
-                            {workflow.status === "running" && (
-                              <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
-                                Running
-                              </Badge>
-                            )}
-                            {workflow.status === "success" && (
-                              <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Success
-                              </Badge>
-                            )}
-                            {workflow.status === "failed" && (
-                              <Badge variant="secondary" className="bg-red-100 text-red-700">
-                                <XCircle className="w-3 h-3 mr-1" />
-                                Failed
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-gray-600 max-w-48 truncate">{workflow.error || "None"}</TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="w-8 h-8">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>View Details</DropdownMenuItem>
-                                <DropdownMenuItem>Re-run</DropdownMenuItem>
-                                <DropdownMenuItem>View Logs</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-red-600">Cancel</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              {/* Workflow Status Table removed as requested */}
 
               {/* Registration Table */}
-              <Card className="border-gray-200">
+              <Card className="border-gray-200 h-full flex flex-col">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -581,7 +555,7 @@ import * as XLSX from "xlsx"
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 flex-1 overflow-auto">
                   {isLoading ? (
                     <div className="p-8 text-center text-gray-500">Loading registrations...</div>
                   ) : filteredRegistrations.length === 0 ? (
@@ -640,11 +614,13 @@ import * as XLSX from "xlsx"
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>View Details</DropdownMenuItem>
-                                  <DropdownMenuItem>Send Email</DropdownMenuItem>
-                                  <DropdownMenuItem>Download Info</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => viewDetails(registration)}>View Details</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => sendEmail(registration)}>Send Email</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => downloadInfo(registration)}>Download Info</DropdownMenuItem>
                                   <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                                  <DropdownMenuItem className="text-red-600" onClick={() => deleteRegistration(registration)}>
+                                    Delete
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
@@ -657,118 +633,34 @@ import * as XLSX from "xlsx"
               </Card>
             </div>
 
-            {/* Right Sidebar */}
-            <div className="space-y-6">
-              {/* Registration Stats */}
-              <Card className="border-gray-200">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold">Registration Stats</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-semibold text-gray-900 mb-4">{totalRegistrations}</div>
-                  <div className="space-y-3 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">This Week</span>
-                      <span className="text-sm font-medium">
-                        {
-                          registrations.filter((reg) => {
-                            const regDate = new Date(reg.created_at)
-                            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                            return regDate > weekAgo
-                          }).length
-                        }
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Today</span>
-                      <span className="text-sm font-medium">{recentRegistrations}</span>
-                    </div>
-                    <Progress value={(recentRegistrations / Math.max(totalRegistrations, 1)) * 100} className="h-2" />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1">
-                      View Report
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-                      Export
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card className="border-gray-200">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold">Recent Registrations</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="space-y-0">
-                    {registrations.slice(0, 5).map((reg) => (
-                      <div
-                        key={reg.id}
-                        className="flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-gray-900 truncate">
-                            {reg.first_name} {reg.last_name}
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            {reg.vehicle_model} • {new Date(reg.created_at).toLocaleTimeString()}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {registrations.length === 0 && (
-                      <div className="p-4 text-sm text-gray-500 text-center">No registrations yet</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Team Status */}
-              <Card className="border-gray-200">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-semibold">Team Status</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="space-y-0">
-                    {teamMembers.map((member, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-4 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="relative">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={member.avatar || "/placeholder.svg"} />
-                            <AvatarFallback>
-                              {member.name
-                                .split(" ")
-                                .map((n: string) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div
-                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                              member.status === "online" ? "bg-green-500" : "bg-gray-400"
-                            }`}
-                          ></div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-gray-900">{member.name}</div>
-                          <div className="text-xs text-gray-600">
-                            {member.role} • {member.availability}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Right Sidebar removed as requested */}
             </div>
-          </div>
         </main>
       </div>
+      {/* Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registration Details</DialogTitle>
+            <DialogDescription>Review the selected registration details</DialogDescription>
+          </DialogHeader>
+          {selectedRegistration ? (
+            <div className="space-y-2 text-sm">
+              <div><span className="font-medium">Registration #:</span> {selectedRegistration.registration_number}</div>
+              <div><span className="font-medium">Name:</span> {selectedRegistration.first_name} {selectedRegistration.last_name}</div>
+              <div><span className="font-medium">Email:</span> {selectedRegistration.email}</div>
+              <div><span className="font-medium">Phone:</span> {selectedRegistration.phone}</div>
+              <div><span className="font-medium">Vehicle:</span> {selectedRegistration.vehicle_year} {selectedRegistration.vehicle_model}</div>
+              <div><span className="font-medium">Model Description:</span> {selectedRegistration.model_description || "-"}</div>
+              <div><span className="font-medium">Created:</span> {new Date(selectedRegistration.created_at).toLocaleString()}</div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600">No registration selected.</div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+
+

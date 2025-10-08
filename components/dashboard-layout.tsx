@@ -3,7 +3,8 @@
 import type React from "react"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { Search, Bell, Home, BarChart3, Settings, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +30,23 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [notifCount, setNotifCount] = useState(0)
+  useEffect(() => {
+    let mounted = true
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/notifications").catch(() => null)
+        if (res && res.ok) {
+          const data = await res.json()
+          if (mounted) setNotifCount(Array.isArray(data) ? data.length : (data?.count ?? 0))
+        }
+      } catch {}
+    }
+    poll()
+    const id = setInterval(poll, 10000)
+    return () => { mounted = false; clearInterval(id) }
+  }, [])
   const username = typeof document !== "undefined"
     ? document.cookie
         .split("; ")
@@ -64,7 +82,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            {notifCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{notifCount}</span>
+            )}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -76,14 +96,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
--              <DropdownMenuLabel>Alex Evans</DropdownMenuLabel>
-+              <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
+              <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Support</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/support")}>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Sign out</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { document.cookie = "dashboard_user=; Max-Age=0; path=/"; router.push("/") }}>Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

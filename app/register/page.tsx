@@ -2,7 +2,12 @@ import { RegistrationForm } from "@/components/registration-form"
 import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle, FileText, Mail, Shield } from "lucide-react"
 
-export default function RegisterPage() {
+export default function RegisterPage({
+  searchParams,
+}: {
+  searchParams?: { rn?: string }
+}) {
+  const rn = searchParams?.rn
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -21,8 +26,27 @@ export default function RegisterPage() {
         </div>
       </section>
 
+      {/* QR Confirmation Banner (if rn present) */}
+      {rn && (
+        <section className="py-6 bg-muted/30">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Card className="border-green-600/40">
+              <CardContent className="p-6 flex items-start gap-4">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground mb-1">Registration Confirmed</h3>
+                  <p className="text-muted-foreground">
+                    Your registration number is <span className="font-mono font-bold text-foreground">{rn}</span>. Please keep this for your records.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
+
       {/* Registration Process */}
-      <section className="py-20 bg-muted/30">
+       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Registration Process</h2>

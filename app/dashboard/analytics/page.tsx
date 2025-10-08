@@ -143,7 +143,110 @@ export default function AnalyticsPage() {
           ))}
         </div>
 
-        <Tabs defaultValue="performance" className="space-y-6">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-gray-200">
+              <CardHeader>
+                <CardTitle>Workflow Executions</CardTitle>
+                <CardDescription>Executions over time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={performanceData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
+                      <YAxis stroke="#6b7280" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Line type="monotone" dataKey="executions" stroke="var(--color-chart-1)" strokeWidth={3} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200">
+              <CardHeader>
+                <CardTitle>Outcomes</CardTitle>
+                <CardDescription>Success vs Failed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={performanceData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
+                      <YAxis stroke="#6b7280" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+                      <Bar dataKey="success" fill="var(--color-chart-1)" name="Success" />
+                      <Bar dataKey="failed" fill="#ef4444" name="Failed" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-gray-200">
+            <CardHeader>
+              <CardTitle>Key Metrics Summary</CardTitle>
+              <CardDescription>Aggregated for selected period</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const totals = performanceData.reduce(
+                  (acc, d) => ({
+                    executions: acc.executions + d.executions,
+                    success: acc.success + d.success,
+                    failed: acc.failed + d.failed,
+                    durationSum: acc.durationSum + d.avgDuration,
+                    count: acc.count + 1,
+                  }),
+                  { executions: 0, success: 0, failed: 0, durationSum: 0, count: 0 }
+                )
+                const successRate = totals.executions ? Math.round((totals.success / totals.executions) * 1000) / 10 : 0
+                const errorRate = totals.executions ? Math.round((totals.failed / totals.executions) * 1000) / 10 : 0
+                const avgDuration = totals.count ? Math.round((totals.durationSum / totals.count) * 10) / 10 : 0
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div>
+                      <div className="text-sm text-gray-600">Total Executions</div>
+                      <div className="text-2xl font-semibold text-gray-900">{totals.executions.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Success Rate</div>
+                      <div className="text-2xl font-semibold text-gray-900">{successRate}%</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Avg Duration</div>
+                      <div className="text-2xl font-semibold text-gray-900">{avgDuration}s</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Error Rate</div>
+                      <div className="text-2xl font-semibold text-gray-900">{errorRate}%</div>
+                    </div>
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="performance" className="space-y-6 hidden">
           <TabsList>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="workflows">Workflows</TabsTrigger>
