@@ -135,7 +135,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-60 border-r border-gray-200 bg-white h-[calc(100vh-4rem)] overflow-y-auto">
+        <aside className="w-60 shrink-0 border-r border-gray-200 bg-white h-[calc(100vh-4rem)] overflow-y-auto">
           <div className="p-4">
             <div className="relative mb-6">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -170,7 +170,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 bg-gray-50">{children}</main>
+        <main className="flex-1 min-w-0 p-8 bg-gray-50">{children}</main>
       </div>
     </div>
   )
