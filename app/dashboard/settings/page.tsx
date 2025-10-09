@@ -14,6 +14,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { UserPlus, Trash2 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
+import { useTheme } from "next-themes"
 
 export default function SettingsPage() {
   const [firstName, setFirstName] = useState("")
@@ -38,6 +39,14 @@ export default function SettingsPage() {
   const [roleUpdatingId, setRoleUpdatingId] = useState<number | null>(null)
   const [removingId, setRemovingId] = useState<number | null>(null)
   const [adminMessage, setAdminMessage] = useState<string | null>(null)
+  const [preferencesSaving, setPreferencesSaving] = useState(false)
+  const [preferencesMessage, setPreferencesMessage] = useState<string | null>(null)
+  const { resolvedTheme, setTheme } = useTheme()
+  // Security tab state
+  const [password, setPassword] = useState("")
+  const [passwordConfirm, setPasswordConfirm] = useState("")
+  const [securitySaving, setSecuritySaving] = useState(false)
+  const [securityMessage, setSecurityMessage] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -49,6 +58,19 @@ export default function SettingsPage() {
         }
       }
     } catch {}
+
+    // Load saved Preferences
+    try {
+      const rawPrefs = localStorage.getItem("appPreferences")
+      if (rawPrefs) {
+        const obj = JSON.parse(rawPrefs)
+        if (typeof obj.notificationsEmail === "boolean") setNotificationsEmail(obj.notificationsEmail)
+        if (typeof obj.notificationsSms === "boolean") setNotificationsSms(obj.notificationsSms)
+        if (obj.theme === "dark" || obj.theme === "light" || obj.theme === "system") {
+          setTheme(obj.theme)
+        }
+      }
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -56,6 +78,11 @@ export default function SettingsPage() {
       localStorage.setItem("adminUsers", JSON.stringify(users))
     } catch {}
   }, [users])
+
+  // keep darkMode in sync with theme
+  useEffect(() => {
+    setDarkMode(resolvedTheme === "dark")
+  }, [resolvedTheme])
 
   const addUser = async () => {
     const name = newUserName.trim()
@@ -212,6 +239,79 @@ export default function SettingsPage() {
     })()
   }
 
+  const handleSavePreferences = async () => {
+    try {
+      setPreferencesSaving(true)
+      const payload = {
+        notificationsEmail,
+        notificationsSms,
+        theme: resolvedTheme ?? "system",
+      }
+      localStorage.setItem("appPreferences", JSON.stringify(payload))
+      setPreferencesMessage("Preferences saved successfully.")
+    } catch (e) {
+      setPreferencesMessage("Failed to save preferences.")
+    } finally {
+      setPreferencesSaving(false)
+      setTimeout(() => setPreferencesMessage(null), 2500)
+    }
+  }
+
+  const handleCancelPreferences = () => {
+    try {
+      const raw = localStorage.getItem("appPreferences")
+      if (raw) {
+        const obj = JSON.parse(raw)
+        if (typeof obj.notificationsEmail === "boolean") setNotificationsEmail(obj.notificationsEmail)
+        if (typeof obj.notificationsSms === "boolean") setNotificationsSms(obj.notificationsSms)
+        if (obj.theme === "dark" || obj.theme === "light" || obj.theme === "system") setTheme(obj.theme)
+      }
+      setPreferencesMessage("Reverted to last saved preferences.")
+    } catch {
+      setPreferencesMessage("No saved preferences to revert.")
+    } finally {
+      setTimeout(() => setPreferencesMessage(null), 2500)
+    }
+  }
+  // Security handlers
+  const handleUpdatePassword = async () => {
+    setSecurityMessage(null)
+    if (!password || !passwordConfirm) {
+      setSecurityMessage("Please fill in both password fields.")
+      return
+    }
+    if (password !== passwordConfirm) {
+      setSecurityMessage("Passwords do not match.")
+      return
+    }
+    if (password.length < 8) {
+      setSecurityMessage("Password must be at least 8 characters.")
+      return
+    }
+    setSecuritySaving(true)
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { data, error } = await supabase.auth.updateUser({ password })
+      if (error) {
+        setSecurityMessage(error.message || "Failed to update password.")
+      } else {
+        setSecurityMessage("Password updated successfully.")
+        setPassword("")
+        setPasswordConfirm("")
+      }
+    } catch (e: any) {
+      setSecurityMessage(e?.message || "Unexpected error updating password.")
+    } finally {
+      setSecuritySaving(false)
+      setTimeout(() => setSecurityMessage(null), 3000)
+    }
+  }
+  const handleCancelSecurity = () => {
+    setPassword("")
+    setPasswordConfirm("")
+    setSecurityMessage(null)
+  }
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialTab = (searchParams.get("tab") as "profile" | "preferences" | "security" | "admin" | null) || "profile"
@@ -317,7 +417,7 @@ export default function SettingsPage() {
                       <p className="text-sm text-gray-600">Use a darker color scheme</p>
                     </div>
                     <button
-                      onClick={() => setDarkMode(!darkMode)}
+                      onClick={() => setTheme(darkMode ? "light" : "dark")}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${darkMode ? "bg-gray-900" : "bg-gray-300"}`}
                     >
                       <span
@@ -358,9 +458,16 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                  <Button className="w-full sm:w-auto">Save Preferences</Button>
-                  <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
+                  <Button onClick={handleSavePreferences} disabled={preferencesSaving} className="w-full sm:w-auto">
+                    {preferencesSaving ? "Saving..." : "Save Preferences"}
+                  </Button>
+                  <Button variant="outline" onClick={handleCancelPreferences} className="w-full sm:w-auto">Cancel</Button>
                 </div>
+                {preferencesMessage && (
+                  <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+                    {preferencesMessage}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -375,17 +482,22 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="password">New password</Label>
-                    <Input id="password" type="password" placeholder="••••••••" />
+                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm">Confirm password</Label>
-                    <Input id="confirm" type="password" placeholder="••••••••" />
+                    <Input id="confirm" type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="••••••••" />
                   </div>
                 </div>
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                  <Button className="w-full sm:w-auto">Update Password</Button>
-                  <Button variant="outline" className="w-full sm:w-auto">Cancel</Button>
+                  <Button onClick={handleUpdatePassword} disabled={securitySaving} className="w-full sm:w-auto">{securitySaving ? "Updating..." : "Update Password"}</Button>
+                  <Button variant="outline" onClick={handleCancelSecurity} className="w-full sm:w-auto">Cancel</Button>
                 </div>
+                {securityMessage && (
+                  <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+                    {securityMessage}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

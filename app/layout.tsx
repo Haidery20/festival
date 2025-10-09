@@ -5,6 +5,7 @@ import { ConditionalNavigation, ConditionalMain, ConditionalGlobal } from "@/com
 import "./globals.css"
 import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,12 +34,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${inter.variable} ${jetbrainsMono.variable}`}>
-        <ConditionalNavigation />
-        <ConditionalMain>
-          <Suspense>{children}</Suspense>
-        </ConditionalMain>
-        <ConditionalGlobal />
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ConditionalNavigation />
+          <ConditionalMain>
+            <Suspense>{children}</Suspense>
+          </ConditionalMain>
+          <ConditionalGlobal />
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
