@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import type React from "react";
+import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 
 export function ConditionalGlobal() {
@@ -35,5 +37,24 @@ export function ConditionalGlobal() {
         <span className="sr-only">WhatsApp</span>
       </a>
     </>
+  );
+}
+
+// Render the global Navigation only on non-dashboard routes
+export function ConditionalNavigation() {
+  const pathname = usePathname();
+  const isDashboard = pathname?.startsWith("/dashboard");
+  if (isDashboard) return null;
+  return <Navigation />;
+}
+
+// Apply top padding to account for fixed navbar only on non-dashboard routes
+export function ConditionalMain({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isDashboard = pathname?.startsWith("/dashboard");
+  return (
+    <main className={`min-h-screen ${isDashboard ? "" : "pt-16"}`}>
+      {children}
+    </main>
   );
 }

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import nodemailer from "nodemailer"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
 
 export const runtime = "nodejs"
 
@@ -15,9 +17,31 @@ export async function POST(request: NextRequest) {
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!url || !serviceRoleKey) {
-      return NextResponse.json({ error: "Supabase URL or service role key not configured" }, { status: 500 })
+    if (!url || !serviceRoleKey || !anon) {
+      return NextResponse.json({ error: "Supabase URL, anon key, or service role key not configured" }, { status: 500 })
+    }
+
+    // Enforce that only authenticated admins can invite
+    const cookieStore = await cookies()
+    const supabaseAuth = createServerClient(url, anon, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        },
+      },
+    })
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const requesterRole = String(((user.app_metadata as any)?.role || (user.user_metadata as any)?.role || "")).toLowerCase()
+    if (requesterRole !== "admin") {
+      return NextResponse.json({ error: "Forbidden: Admins only" }, { status: 403 })
     }
 
     // In production, require explicit allow flag

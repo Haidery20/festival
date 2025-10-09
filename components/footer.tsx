@@ -14,8 +14,8 @@ export function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-lg">Land Rover Festival</span>
--                <span className="text-sm text-primary-foreground/80">Tanzania 2025</span>
-+                <span className="text-sm text-primary-foreground/80">Iringa, Tanzania • 2025</span>
+               <span className="text-sm text-primary-foreground/80">Tanzania 2025</span>
+               <span className="text-sm text-primary-foreground/80">Iringa, Tanzania • 2025</span>
               </div>
             </Link>
             <p className="text-primary-foreground/80 mb-4 max-w-md">
@@ -72,10 +72,10 @@ export function Footer() {
                 <MapPin className="h-4 w-4 text-accent" />
                 <span className="text-primary-foreground/80 text-sm">Dar es Salaam, Tanzania</span>
               </li>
-+              <li className="flex items-center space-x-2">
-+                <MapPin className="h-4 w-4 text-accent" />
-+                <span className="text-primary-foreground/80 text-sm">Iringa Region, Tanzania</span>
-+              </li>
+              <li className="flex items-center space-x-2">
+                <MapPin className="h-4 w-4 text-accent" />
+                <span className="text-primary-foreground/80 text-sm">Iringa Region, Tanzania</span>
+             </li>
             </ul>
           </div>
         </div>

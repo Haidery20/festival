@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Search,
   MoreHorizontal,
@@ -8,7 +8,7 @@ import {
   Calendar,
   Clock,
   Shield,
-  User,
+  User as UserIcon,
   Settings,
   UserPlus,
   Crown,
@@ -29,6 +29,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 const teamMembers: any[] = []
 
@@ -63,6 +65,16 @@ const roles = [
 
 export default function TeamPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient()
+    supabase.auth.getUser().then(({ data }: { data: { user: SupabaseUser | null } }) => {
+      const user = data?.user
+      const role = String(((user?.app_metadata as any)?.role || (user?.user_metadata as any)?.role || "")).toLowerCase()
+      setIsAdmin(role === "admin")
+    }).catch(() => setIsAdmin(false))
+  }, [])
 
   const filteredMembers = teamMembers.filter(
     (member) =>
@@ -103,10 +115,12 @@ export default function TeamPage() {
               <Settings className="w-4 h-4" />
               Settings
             </Button>
-            <Button className="gap-2">
-              <UserPlus className="w-4 h-4" />
-              Invite Member
-            </Button>
+            {isAdmin && (
+              <Button className="gap-2">
+                <UserPlus className="w-4 h-4" />
+                Invite Member
+              </Button>
+            )}
           </div>
         </div>
 
@@ -135,7 +149,7 @@ export default function TeamPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <User className="w-5 h-5 text-blue-600" />
+                      <UserIcon className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <div className="text-2xl font-semibold text-gray-900">{teamMembers.length}</div>
@@ -253,7 +267,7 @@ export default function TeamPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>
-                              <User className="w-4 h-4 mr-2" />
+                              <UserIcon className="w-4 h-4 mr-2" />
                               View Profile
                             </DropdownMenuItem>
                             <DropdownMenuItem>
@@ -336,10 +350,12 @@ export default function TeamPage() {
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Pending Invitations</h3>
                 <p className="text-gray-600 mb-4">All team invitations have been accepted or expired.</p>
-                <Button>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Invite New Member
-                </Button>
+                {isAdmin && (
+                  <Button>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Invite New Member
+                  </Button>
+                )}
               </div>
             )}
           </TabsContent>
