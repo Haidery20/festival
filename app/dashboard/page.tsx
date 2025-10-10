@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -169,11 +170,11 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="space-y-8 dark:text-white">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Event Registrations</h1>
-            <p className="text-gray-600 mt-1">Monitor and manage Land Rover Festival registrations</p>
+            <h1 className="text-2xl font-semibold dark:text-white">Event Registrations</h1>
+            <p className="mt-1 dark:text-white">Monitor and manage Land Rover Festival registrations</p>
           </div>
           <Button onClick={exportToExcel}>
             <Download className="w-4 h-4 mr-2" />
@@ -184,8 +185,8 @@ export default function Dashboard() {
         <Card className="border-gray-200">
           <CardHeader className="pb-4 flex justify-between items-center">
             <div>
-              <CardTitle className="text-lg font-semibold">All Registrations</CardTitle>
-              <CardDescription>Complete list of event registrations</CardDescription>
+              <CardTitle className="text-lg font-semibold dark:text-white">All Registrations</CardTitle>
+              <CardDescription className="dark:text-white">Complete list of event registrations</CardDescription>
             </div>
             <div className="flex gap-2">
               <DropdownMenu>
@@ -208,27 +209,65 @@ export default function Dashboard() {
 
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-8 text-center text-gray-500">Loading registrations...</div>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64" />
+                  </div>
+                  <Skeleton className="h-9 w-28" />
+                </div>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[900px]">
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="dark:text-white">Reg. Number</TableHead>
+                        <TableHead className="dark:text-white">Name</TableHead>
+                        <TableHead className="dark:text-white">Email</TableHead>
+                        <TableHead className="dark:text-white">Phone</TableHead>
+                        <TableHead className="dark:text-white">Vehicle</TableHead>
+                        <TableHead className="dark:text-white">Date</TableHead>
+                        <TableHead className="dark:text-white">Status</TableHead>
+                        <TableHead className="dark:text-white"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: rowsPerPage }).map((_, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-56" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             ) : paginatedRegistrations.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">No registrations found.</div>
+              <div className="p-8 text-center dark:text-white">No registrations found.</div>
             ) : (
               <div className="overflow-x-auto">
                 <Table className="min-w-[900px]">
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead>Reg. Number</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Vehicle</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead></TableHead>
+                      <TableHead className="dark:text-white">Reg. Number</TableHead>
+                      <TableHead className="dark:text-white">Name</TableHead>
+                      <TableHead className="dark:text-white">Email</TableHead>
+                      <TableHead className="dark:text-white">Phone</TableHead>
+                      <TableHead className="dark:text-white">Vehicle</TableHead>
+                      <TableHead className="dark:text-white">Date</TableHead>
+                      <TableHead className="dark:text-white">Status</TableHead>
+                      <TableHead className="dark:text-white"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedRegistrations.map((registration) => (
-                      <TableRow key={registration.id} className="group hover:bg-white hover:text-black transition-colors dark:hover:bg-muted dark:hover:text-foreground">
+                      <TableRow key={registration.id} className="group dark:hover:bg-gray-800 dark:hover:text-white transition-colors">
                         <TableCell>{registration.registration_number}</TableCell>
                         <TableCell>{registration.first_name} {registration.last_name}</TableCell>
                         <TableCell>{registration.email}</TableCell>
@@ -237,11 +276,11 @@ export default function Dashboard() {
                         <TableCell>{new Date(registration.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           {registration.terms_accepted && registration.insurance_confirmed ? (
-                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                            <Badge variant="secondary" className="bg-green-600 text-white">
                               <Clock className="w-3 h-3 mr-1" /> Verified
                             </Badge>
                           ) : (
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                            <Badge variant="secondary" className="bg-yellow-600 text-white">
                               <Clock className="w-3 h-3 mr-1" /> Pending
                             </Badge>
                           )}
@@ -273,11 +312,11 @@ export default function Dashboard() {
             )}
           </CardContent>
 
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 text-sm text-gray-700">
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 text-sm dark:text-white">
             <div className="flex items-center gap-2">
               <span>Rows per page:</span>
               <select
-                className="border border-gray-300 rounded-md px-2 py-1"
+                className="border border-gray-300 rounded-md px-2 py-1 bg-transparent dark:text-white"
                 value={rowsPerPage}
                 onChange={(e) => {
                   setRowsPerPage(Number(e.target.value))
@@ -313,27 +352,35 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Registration Details</DialogTitle>
-              <DialogDescription>Review the selected registration details</DialogDescription>
-            </DialogHeader>
-            {selectedRegistration ? (
-              <div className="space-y-2 text-sm">
-                <div><span className="font-medium">Registration #:</span> {selectedRegistration.registration_number}</div>
-                <div><span className="font-medium">Name:</span> {selectedRegistration.first_name} {selectedRegistration.last_name}</div>
-                <div><span className="font-medium">Email:</span> {selectedRegistration.email}</div>
-                <div><span className="font-medium">Phone:</span> {selectedRegistration.phone}</div>
-                <div><span className="font-medium">Vehicle:</span> {selectedRegistration.vehicle_year} {selectedRegistration.vehicle_model}</div>
-                <div><span className="font-medium">Model Description:</span> {selectedRegistration.model_description}</div>
-                <div><span className="font-medium">Created:</span> {new Date(selectedRegistration.created_at).toLocaleString()}</div>
-              </div>
-            ) : (
-              <div className="text-sm text-gray-600">No registration selected.</div>
-            )}
-          </DialogContent>
-        </Dialog>
+        {detailsOpen && (
+          <Dialog
+            open={detailsOpen}
+            onOpenChange={(open) => {
+              setDetailsOpen(open)
+              if (!open) setSelectedRegistration(null)
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="dark:text-white">Registration Details</DialogTitle>
+                <DialogDescription className="dark:text-white">Review the selected registration details</DialogDescription>
+              </DialogHeader>
+              {selectedRegistration ? (
+                <div className="space-y-2 text-sm dark:text-white">
+                  <div><span className="font-medium">Registration #:</span> {selectedRegistration.registration_number}</div>
+                  <div><span className="font-medium">Name:</span> {selectedRegistration.first_name} {selectedRegistration.last_name}</div>
+                  <div><span className="font-medium">Email:</span> {selectedRegistration.email}</div>
+                  <div><span className="font-medium">Phone:</span> {selectedRegistration.phone}</div>
+                  <div><span className="font-medium">Vehicle:</span> {selectedRegistration.vehicle_year} {selectedRegistration.vehicle_model}</div>
+                  <div><span className="font-medium">Model Description:</span> {selectedRegistration.model_description}</div>
+                  <div><span className="font-medium">Created:</span> {new Date(selectedRegistration.created_at).toLocaleString()}</div>
+                </div>
+              ) : (
+                <div className="text-sm dark:text-white">No registration selected.</div>
+              )}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </DashboardLayout>
   )

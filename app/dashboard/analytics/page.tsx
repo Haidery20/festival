@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TrendingUp, TrendingDown, BarChart3, Activity, Clock, CheckCircle, XCircle, Download } from "lucide-react"
 import {
   LineChart,
@@ -88,6 +88,161 @@ const kpiData = [
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30d")
+  // Fetch actual registrations and compute metrics for analytics
+  const [registrations, setRegistrations] = useState<any[]>([])
+
+  useEffect(() => {
+    let mounted = true
+    const loadRegistrations = async () => {
+      try {
+        const res = await fetch("/api/registration")
+        const json = await res.json()
+        if (mounted) {
+          setRegistrations(Array.isArray(json?.registrations) ? json.registrations : [])
+        }
+      } catch (e) {
+        if (mounted) setRegistrations([])
+      }
+    }
+    loadRegistrations()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Derive period and group registrations per day for charts
+  const periodDays = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : timeRange === "90d" ? 90 : 365
+  const endDate = new Date()
+  const startDate = new Date()
+  startDate.setDate(endDate.getDate() - (periodDays - 1))
+
+  const filteredRegs = registrations.filter((r) => {
+    const d = new Date(r?.created_at || Date.now())
+    return d >= startDate && d <= endDate
+  })
+
+  const isVerified = (r: any) => !!(r?.terms_accepted && r?.insurance_confirmed)
+
+  const days: Date[] = Array.from({ length: periodDays }, (_, i) => {
+    const d = new Date(startDate)
+    d.setDate(startDate.getDate() + i)
+    return d
+  })
+
+  const formatDayLabel = (d: Date) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+
+  const performanceData = days.map((day) => {
+    const dayString = day.toISOString().slice(0, 10)
+    const regsForDay = filteredRegs.filter((r) => (r?.created_at || "").slice(0, 10) === dayString)
+    const verifiedCount = regsForDay.reduce((acc, r) => acc + (isVerified(r) ? 1 : 0), 0)
+    const total = regsForDay.length
+    return {
+      name: formatDayLabel(day),
+      executions: total,
+      success: verifiedCount,
+      failed: Math.max(total - verifiedCount, 0),
+      avgDuration: total,
+    }
+  })
+
+  // Compute KPI metrics and trends vs previous equal-length period
+  const prevStart = new Date(startDate)
+  prevStart.setDate(prevStart.getDate() - periodDays)
+  const prevEnd = new Date(startDate)
+  prevEnd.setDate(prevEnd.getDate() - 1)
+
+  const prevRegs = registrations.filter((r) => {
+    const d = new Date(r?.created_at || Date.now())
+    return d >= prevStart && d <= prevEnd
+  })
+
+  const totalExecutions = filteredRegs.length
+  const totalVerified = filteredRegs.reduce((acc, r) => acc + (isVerified(r) ? 1 : 0), 0)
+  const totalPending = Math.max(totalExecutions - totalVerified, 0)
+  const successRatePct = totalExecutions ? Math.round((totalVerified / totalExecutions) * 1000) / 10 : 0
+  const errorRatePct = totalExecutions ? Math.round((totalPending / totalExecutions) * 1000) / 10 : 0
+  const avgPerDay = periodDays ? Math.round((totalExecutions / periodDays) * 10) / 10 : 0
+
+  const prevTotal = prevRegs.length
+  const prevVerified = prevRegs.reduce((acc, r) => acc + (isVerified(r) ? 1 : 0), 0)
+  const prevAvgPerDay = periodDays ? Math.round((prevTotal / periodDays) * 10) / 10 : 0
+
+  const pctChange = (current: number, prev: number) => {
+    if (!prev) return "+0%"
+    const diff = ((current - prev) / prev) * 100
+    const rounded = Math.round(diff * 10) / 10
+    return `${rounded >= 0 ? "+" : ""}${rounded}%`
+  }
+  const trendDir = (current: number, prev: number) => (current >= prev ? "up" : "down")
+
+  const kpiData = [
+    {
+      title: "Total Registrations",
+      value: totalExecutions.toLocaleString(),
+      change: pctChange(totalExecutions, prevTotal),
+      trend: trendDir(totalExecutions, prevTotal),
+      icon: Activity,
+      description: "This period",
+    },
+    {
+      title: "Verified Rate",
+      value: `${successRatePct}%`,
+      change: pctChange(totalVerified, prevVerified),
+      trend: trendDir(totalVerified, prevVerified),
+      icon: CheckCircle,
+      description: "Selected range",
+    },
+    {
+      title: "Avg per day",
+      value: `${avgPerDay}`,
+      change: pctChange(avgPerDay, prevAvgPerDay),
+      trend: trendDir(avgPerDay, prevAvgPerDay),
+      icon: Clock,
+      description: "Across days",
+    },
+    {
+      title: "Pending Rate",
+      value: `${errorRatePct}%`,
+      change: pctChange(totalPending, Math.max(prevTotal - prevVerified, 0)),
+      trend: trendDir(totalPending, Math.max(prevTotal - prevVerified, 0)),
+      icon: XCircle,
+      description: "Selected range",
+    },
+  ]
+
+  // Compute distribution by "hear_about_us" for pie and top list
+  const chartPalette = [
+    "var(--color-chart-1)",
+    "var(--color-chart-2)",
+    "var(--color-chart-3)",
+    "var(--color-chart-4)",
+  ]
+  const distMap = new Map<string, number>()
+  filteredRegs.forEach((r) => {
+    const key = (r?.hear_about_us || "Other").toString().trim() || "Other"
+    distMap.set(key, (distMap.get(key) || 0) + 1)
+  })
+  const distEntries = Array.from(distMap.entries()).sort((a, b) => b[1] - a[1])
+  const topEntries = distEntries.slice(0, chartPalette.length)
+  const otherSum = distEntries.slice(chartPalette.length).reduce((acc, [, v]) => acc + v, 0)
+  const workflowDistribution = [
+    ...topEntries.map(([name, value], idx) => ({ name, value, color: chartPalette[idx] })),
+    ...(otherSum > 0 ? [{ name: "Other", value: otherSum, color: "#ef4444" }] : []),
+  ]
+
+  // Error analysis based on missing confirmations/consents
+  const errorCounts = [
+    { name: "Missing Insurance", count: filteredRegs.filter((r) => !r?.insurance_confirmed).length },
+    { name: "Missing Terms", count: filteredRegs.filter((r) => !r?.terms_accepted).length },
+    { name: "Missing Media Consent", count: filteredRegs.filter((r) => !r?.media_consent).length },
+    { name: "Missing Safety Acknowledgement", count: filteredRegs.filter((r) => !r?.safety_acknowledged).length },
+  ]
+  const errorTotal = errorCounts.reduce((acc, e) => acc + e.count, 0)
+  const errorAnalysis = errorCounts.map((e) => ({
+    name: e.name,
+    count: e.count,
+    percentage: errorTotal ? Math.round((e.count / errorTotal) * 1000) / 10 : 0,
+  }))
 
   return (
     <DashboardLayout>

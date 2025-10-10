@@ -4,7 +4,7 @@ import type React from "react"
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Search, Bell, Home, BarChart3, Settings, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +35,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const [notifCount, setNotifCount] = useState(0)
   const [displayName, setDisplayName] = useState<string>("Land Rover Festival")
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; href?: string; read?: boolean; created_at: string }>>([])
+  const dismissedRef = useRef<Set<string>>(new Set())
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   useEffect(() => {
     let mounted = true
     const poll = async () => {
@@ -42,7 +45,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const res = await fetch("/api/notifications").catch(() => null)
         if (res && res.ok) {
           const data = await res.json()
-          if (mounted) setNotifCount(Array.isArray(data) ? data.length : (data?.count ?? 0))
+          if (mounted) {
+            if (Array.isArray(data)) {
+              const ids = dismissedRef.current
+              const filtered = data.filter((n: any) => !n.read && !ids.has(n.id))
+              setNotifications(filtered)
+              setNotifCount(filtered.length)
+            } else {
+              setNotifCount((data?.count ?? 0) as number)
+            }
+          }
         }
       } catch {}
     }
@@ -95,12 +107,82 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               className="pl-10 w-80 bg-gray-50 border-gray-200 focus:bg-white"
             />
           </div>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-4 h-4" />
-            {notifCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{notifCount}</span>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="w-4 h-4" />
+                {notifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{notifCount}</span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {notifications.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-muted-foreground">No notifications</div>
+              ) : (
+                notifications.map((n) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    onClick={() => {
+                      if (n.href) router.push(n.href)
+                      setDismissedIds((prev) => {
+                        const next = new Set(prev)
+                        next.add(n.id)
+                        dismissedRef.current = next
+                        return next
+                      })
+                      setNotifications((prev) => prev.filter((p) => p.id !== n.id))
+                      setNotifCount((prev) => Math.max(prev - (n.read ? 0 : 1), 0))
+                    }}
+                    className={`${n.read ? "opacity-70" : ""}`}
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium">{n.title}</span>
+                      <span className="text-xs text-muted-foreground">{n.message}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  setDismissedIds((prev) => {
+                    const next = new Set(prev)
+                    notifications.forEach((p) => next.add(p.id))
+                    dismissedRef.current = next
+                    return next
+                  })
+                  setNotifications([])
+                  setNotifCount(0)
+                }}
+              >
+                Mark all as read
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/notifications")
+                    if (res.ok) {
+                      const data = await res.json()
+                      if (Array.isArray(data)) {
+                        const ids = dismissedRef.current
+                        const filtered = data.filter((n: any) => !n.read && !ids.has(n.id))
+                        setNotifications(filtered)
+                        setNotifCount(filtered.length)
+                      } else {
+                        setNotifCount((data?.count ?? 0) as number)
+                      }
+                    }
+                  } catch {}
+                }}
+              >
+                Refresh
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="rounded-full p-0">
@@ -113,8 +195,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              -               <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>Profile</DropdownMenuItem>
-              +               <DropdownMenuItem onClick={() => router.push("/dashboard/settings?tab=profile")}>Profile</DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>Profile</DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => router.push("/dashboard/settings?tab=profile")}>Profile</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/support")}>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
