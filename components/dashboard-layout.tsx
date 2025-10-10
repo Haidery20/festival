@@ -73,15 +73,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const initials = (displayName || "U").split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="h-16 border-b border-gray-200 bg-white px-6 flex items-center justify-between">
+      <header className="h-16 border-b border-border bg-card px-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <img src="/festivallogo.svg" alt="Festival Logo" className="h-8 w-auto" />
-            <span className="font-semibold text-gray-900">{displayName}</span>
+            <span className="font-semibold text-foreground">{displayName}</span>
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             <span>Dashboard</span> <span className="mx-1">/</span>
             <span className="capitalize">{pathname === "/dashboard" ? "Overview" : pathname.replace("/dashboard/", "")}</span>
           </div>
@@ -89,7 +89,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         <div className="flex items-center gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Search workflows, logs..."
               className="pl-10 w-80 bg-gray-50 border-gray-200 focus:bg-white"
@@ -135,11 +135,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-60 shrink-0 border-r border-gray-200 bg-white h-[calc(100vh-4rem)] overflow-y-auto">
+        <aside className="w-60 shrink-0 border-r border-border bg-card h:[calc(100vh-4rem)] overflow-y-auto">
           <div className="p-4">
             <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input placeholder="Search anything..." className="pl-10 bg-gray-50 border-gray-200 text-sm" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input placeholder="Search anything..." className="pl-10 bg-input border-border text-sm" />
               <Button
                 size="icon"
                 variant="ghost"
@@ -157,7 +157,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     key={item.name}
                     href={item.href}
                     className={`flex items-center w-full justify-start px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-gray-600 hover:bg-gray-50"
+                      isActive ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     <item.icon className="w-4 h-4 mr-3" />
@@ -170,7 +170,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 p-8 bg-gray-50">{children}</main>
+        <main className="flex-1 min-w-0 p-8 bg-background">{children}</main>
       </div>
     </div>
   )

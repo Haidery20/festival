@@ -41,33 +41,33 @@
 }
 
 .dark {
-  /* Dark mode with deep military green background */
-  --background: oklch(0.08 0.02 140);
+  /* Dark mode with deep navy background per request */
+  --background: #12182B;
   --foreground: oklch(0.95 0.01 120);
-  --card: oklch(0.12 0.02 140);
+  --card: #172037;
   --card-foreground: oklch(0.95 0.01 120);
-  --popover: oklch(0.12 0.02 140);
+  --popover: #172037;
   --popover-foreground: oklch(0.95 0.01 120);
   --primary: oklch(0.75 0.15 85); /* Gold in dark mode */
-  --primary-foreground: oklch(0.08 0.02 140);
+  --primary-foreground: #12182B;
   --secondary: oklch(0.25 0.08 140); /* Military green in dark mode */
   --secondary-foreground: oklch(0.95 0.01 120);
-  --muted: oklch(0.18 0.02 140);
+  --muted: #19233A;
   --muted-foreground: oklch(0.65 0.02 120);
   --accent: oklch(0.75 0.15 85);
-  --accent-foreground: oklch(0.08 0.02 140);
+  --accent-foreground: #12182B;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.95 0.01 120);
-  --border: oklch(0.25 0.04 140);
-  --input: oklch(0.18 0.02 140);
+  --border: #223049;
+  --input: #151C30;
   --ring: oklch(0.75 0.15 85);
-  --sidebar: oklch(0.12 0.02 140);
+  --sidebar: #141D31;
   --sidebar-foreground: oklch(0.95 0.01 120);
   --sidebar-primary: oklch(0.75 0.15 85);
-  --sidebar-primary-foreground: oklch(0.08 0.02 140);
-  --sidebar-accent: oklch(0.18 0.02 140);
+  --sidebar-primary-foreground: #12182B;
+  --sidebar-accent: #19233A;
   --sidebar-accent-foreground: oklch(0.95 0.01 120);
-  --sidebar-border: oklch(0.25 0.04 140);
+  --sidebar-border: #223049;
   --sidebar-ring: oklch(0.75 0.15 85);
 }
 

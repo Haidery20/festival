@@ -228,7 +228,7 @@ export default function Dashboard() {
                   </TableHeader>
                   <TableBody>
                     {paginatedRegistrations.map((registration) => (
-                      <TableRow key={registration.id} className="hover:bg-gray-50">
+                      <TableRow key={registration.id} className="group hover:bg-white hover:text-black transition-colors dark:hover:bg-muted dark:hover:text-foreground">
                         <TableCell>{registration.registration_number}</TableCell>
                         <TableCell>{registration.first_name} {registration.last_name}</TableCell>
                         <TableCell>{registration.email}</TableCell>
