@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
       mediaConsent,
       // removed: licensePlate,
       registrationNumber,
+      skipEmails,
     } = body
 
     // Use provided registration number or generate one
@@ -216,9 +217,12 @@ export async function POST(request: NextRequest) {
       console.warn("SMTP configuration missing. Skipping sending emails. Set SMTP_HOST, SMTP_USER, SMTP_PASS to enable.")
     }
 
+    // Respect preferences: load notificationsSms from local storage is client-only; on server, use environment flag
+    const smsEnabled = process.env.SMS_ENABLED === "true"
+
     let emailsSent = false
 
-    if (emailsEnabled) {
+    if (emailsEnabled && !skipEmails) {
       const securePorts = [465, 8465, 443]
       const transporter = nodemailer.createTransport({
         host: smtpHost,
@@ -322,6 +326,45 @@ export async function POST(request: NextRequest) {
     // Save the email as registered to prevent duplicates when Supabase isn't configured
     if (!supabase) {
       await saveRegisteredEmail(email)
+    }
+
+    // SMS notification (admin mobile)
+    try {
+      if (smsEnabled) {
+        const smsMessage = "Hurray new participant just registered."
+        const smsSenderId = process.env.SMS_SENDER_ID || "Landrover Festival"
+        const smsRecipient = process.env.SMS_ADMIN_NUMBER || "+255658431733"
+        const messageBirdKey = process.env.MESSAGEBIRD_API_KEY
+        if (messageBirdKey) {
+          await fetch("https://rest.messagebird.com/messages", {
+            method: "POST",
+            headers: {
+              Authorization: `AccessKey ${messageBirdKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ originator: smsSenderId, recipients: [smsRecipient], body: smsMessage }),
+          }).catch((err) => { console.warn("MessageBird SMS send error:", err) })
+        } else {
+          // Development fallback: write SMS payload to local log file so you can validate the content without a provider
+          try {
+            const entry = { time: new Date().toISOString(), originator: smsSenderId, recipients: [smsRecipient], body: smsMessage }
+            let log: any[] = []
+            if (fs.existsSync(SMS_LOG_FILE)) {
+              const raw = fs.readFileSync(SMS_LOG_FILE, "utf8").trim()
+              if (raw) {
+                log = JSON.parse(raw)
+              }
+            }
+            log.push(entry)
+            fs.writeFileSync(SMS_LOG_FILE, JSON.stringify(log, null, 2))
+            console.info("[DEV] SMS not configured. Wrote SMS entry to sms-log.json.")
+          } catch (fileErr) {
+            console.warn("Failed to write dev SMS log:", fileErr)
+          }
+        }
+      }
+    } catch (smsErr) {
+      console.warn("SMS notification error:", smsErr)
     }
 
     return NextResponse.json(
@@ -619,3 +662,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+// Local SMS log file (for development fallback when provider not configured)
+const SMS_LOG_FILE = path.join(process.cwd(), "sms-log.json")

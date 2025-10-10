@@ -38,7 +38,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; href?: string; read?: boolean; created_at: string }>>([])
   const dismissedRef = useRef<Set<string>>(new Set())
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+  const DISMISSED_KEY = "dashboard.dismissedNotifications"
   useEffect(() => {
+    // Load dismissed notification IDs from localStorage to persist across refreshes
+    try {
+      const raw = typeof window !== "undefined" ? window.localStorage.getItem(DISMISSED_KEY) : null
+      if (raw) {
+        const arr = JSON.parse(raw)
+        if (Array.isArray(arr)) {
+          const s = new Set<string>(arr)
+          dismissedRef.current = s
+          setDismissedIds(s)
+        }
+      }
+    } catch {}
     let mounted = true
     const poll = async () => {
       try {
@@ -67,7 +80,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const applyUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        setDisplayName(user.email || (user.user_metadata as any)?.name || "User")
+        const meta: any = user.user_metadata || {}
+        const fullName = [meta?.first_name, meta?.last_name].filter(Boolean).join(" ") || meta?.name
+        setDisplayName(fullName || user.email || "User")
       } else {
         setDisplayName("Land Rover Festival")
       }
@@ -75,7 +90,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     applyUser()
     const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session?.user) {
-        setDisplayName(session.user.email || (session.user.user_metadata as any)?.name || "User")
+        const meta: any = session.user.user_metadata || {}
+        const fullName = [meta?.first_name, meta?.last_name].filter(Boolean).join(" ") || meta?.name
+        setDisplayName(fullName || session.user.email || "User")
       } else {
         setDisplayName("Land Rover Festival")
       }
@@ -91,7 +108,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <img src="/festivallogo.svg" alt="Festival Logo" className="h-8 w-auto" />
-            <span className="font-semibold text-foreground">{displayName}</span>
+            <span className="font-semibold text-foreground">{(displayName || "").split(" ")[0] || displayName}</span>
           </div>
           <div className="text-sm text-muted-foreground">
             <span>Dashboard</span> <span className="mx-1">/</span>
@@ -131,6 +148,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         const next = new Set(prev)
                         next.add(n.id)
                         dismissedRef.current = next
+                        try {
+                          window.localStorage.setItem(DISMISSED_KEY, JSON.stringify(Array.from(next)))
+                        } catch {}
                         return next
                       })
                       setNotifications((prev) => prev.filter((p) => p.id !== n.id))
@@ -153,6 +173,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     const next = new Set(prev)
                     notifications.forEach((p) => next.add(p.id))
                     dismissedRef.current = next
+                    try {
+                      window.localStorage.setItem(DISMISSED_KEY, JSON.stringify(Array.from(next)))
+                    } catch {}
                     return next
                   })
                   setNotifications([])
@@ -187,16 +210,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="rounded-full p-0">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                  <AvatarFallback>{initials}</AvatarFallback>
+                  {/* Only show image if user has an avatar_url; otherwise rely on crisp initials */}
+                  {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+                  {/* @ts-ignore */}
+                  <AvatarImage src={undefined} alt="User avatar" />
+                  <AvatarFallback className="font-semibold text-xs">{initials}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-                             <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>Profile</DropdownMenuItem>
-                             <DropdownMenuItem onClick={() => router.push("/dashboard/settings?tab=profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/settings?tab=profile")}>Profile</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/support")}>Support</DropdownMenuItem>
               <DropdownMenuSeparator />

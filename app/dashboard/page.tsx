@@ -67,6 +67,7 @@ export default function Dashboard() {
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
+  const [role, setRole] = useState<"Admin" | "Editor" | "Viewer">("Viewer")
 
   const router = useRouter()
   const { toast } = useToast()
@@ -95,7 +96,52 @@ export default function Dashboard() {
       }
     }
     fetchRegistrations()
+    // Fetch user role from Supabase session
+    const supabase = getSupabaseBrowserClient()
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data?.user
+      if (user) {
+        const meta: any = user.user_metadata || {}
+        const appMeta: any = (user as any).app_metadata || {}
+        const r = String((appMeta?.role || meta?.role || "Viewer")).toLowerCase()
+        setRole(r === "admin" ? "Admin" : r === "editor" ? "Editor" : "Viewer")
+      }
+    })
   }, [])
+
+  // Download participant form (PDF)
+  async function downloadInfo(reg: Registration) {
+    try {
+      const payload = {
+        registrationNumber: reg.registration_number,
+        firstName: reg.first_name,
+        lastName: reg.last_name,
+        email: reg.email,
+        phone: reg.phone,
+        vehicleModel: reg.vehicle_model,
+        vehicleYear: reg.vehicle_year,
+        modelDescription: reg.model_description,
+        accommodationType: reg.accommodation_type || "",
+      }
+      const res = await fetch("/api/registration/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error("Unable to download PDF")
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `LandRover-Festival-Registration-${reg.registration_number}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e: any) {
+      toast({ title: "Download failed", description: String(e?.message || e), variant: "destructive" })
+    }
+  }
 
   const filteredRegistrations = registrations.filter((reg) => {
     const query = searchQuery.toLowerCase()
@@ -286,23 +332,32 @@ export default function Dashboard() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="w-8 h-8">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => viewDetails(registration)}>View Details</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => deleteRegistration(registration)}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {role === "Viewer" ? null : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="w-8 h-8">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => viewDetails(registration)}>View Details</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => downloadInfo(registration)}>
+                                  Download Info
+                                </DropdownMenuItem>
+                                {role === "Admin" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => deleteRegistration(registration)}
+                                    >
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
