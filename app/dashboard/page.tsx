@@ -98,7 +98,8 @@ export default function Dashboard() {
     fetchRegistrations()
     // Fetch user role from Supabase session
     const supabase = getSupabaseBrowserClient()
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then((result: { data: { user: any } | null }) => {
+      const data = result?.data
       const user = data?.user
       if (user) {
         const meta: any = user.user_metadata || {}
