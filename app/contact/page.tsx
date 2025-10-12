@@ -156,7 +156,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-foreground mb-2">Do I need special insurance for the event?</h3>
                     <p className="text-muted-foreground">
-                      Yes, comprehensive insurance coverage is required for all participating vehicles. We can provide
+                      Yes, valid insurance coverage is required for all participating vehicles. We can provide
                       recommendations for specialized off-road event insurance.
                     </p>
                   </div>

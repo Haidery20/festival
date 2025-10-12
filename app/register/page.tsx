@@ -135,7 +135,7 @@ export default function RegisterPage({
                 <h3 className="text-xl font-semibold text-foreground mb-3">Registration Requirements</h3>
                 <ul className="text-muted-foreground space-y-2 text-sm">
                   <li>• Valid driver's license and vehicle registration</li>
-                  <li>• Comprehensive insurance coverage</li>
+                  <li>• Valid insurance coverage</li>
                   <li>• Vehicle safety inspection certificate</li>
                   <li>• Emergency contact information</li>
                   <li>• Medical information (if applicable)</li>

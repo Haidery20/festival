@@ -38,6 +38,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; href?: string; read?: boolean; created_at: string }>>([])
   const dismissedRef = useRef<Set<string>>(new Set())
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const DISMISSED_KEY = "dashboard.dismissedNotifications"
   useEffect(() => {
     // Load dismissed notification IDs from localStorage to persist across refreshes
@@ -83,8 +84,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const meta: any = user.user_metadata || {}
         const fullName = [meta?.first_name, meta?.last_name].filter(Boolean).join(" ") || meta?.name
         setDisplayName(fullName || user.email || "User")
+        // Set avatar url from user metadata if present
+        setAvatarUrl(meta?.avatar_url || null)
       } else {
         setDisplayName("Land Rover Festival")
+        setAvatarUrl(null)
       }
     }
     applyUser()
@@ -93,8 +97,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         const meta: any = session.user.user_metadata || {}
         const fullName = [meta?.first_name, meta?.last_name].filter(Boolean).join(" ") || meta?.name
         setDisplayName(fullName || session.user.email || "User")
+        // Update avatar_url on auth changes
+        setAvatarUrl(meta?.avatar_url || null)
       } else {
         setDisplayName("Land Rover Festival")
+        setAvatarUrl(null)
       }
     })
     return () => { sub.subscription.unsubscribe() }
@@ -213,7 +220,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   {/* Only show image if user has an avatar_url; otherwise rely on crisp initials */}
                   {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
                   {/* @ts-ignore */}
-                  <AvatarImage src={undefined} alt="User avatar" />
+                  <AvatarImage src={avatarUrl ?? undefined} alt="User avatar" />
                   <AvatarFallback className="font-semibold text-xs">{initials}</AvatarFallback>
                 </Avatar>
               </Button>

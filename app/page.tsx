@@ -3,11 +3,27 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import { Calendar, MapPin, Users, Trophy, Mountain, Compass, Camera, Shield } from "lucide-react"
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel"
-import Image from "next/image"
-import Autoplay from "embla-carousel-autoplay"
-import { PartnersCarousel } from "@/components/partners-carousel"
-import { HeroCarousel } from "@/components/hero-carousel"
+import { Skeleton } from "@/components/ui/skeleton"
+// Remove heavy unused imports from homepage bundle
+
+import dynamic from "next/dynamic"
+// Lazy load heavy carousels to reduce initial bundle with smooth loading placeholder
+const HeroCarousel = dynamic(() => import("@/components/hero-carousel").then(m => m.HeroCarousel), {
+  ssr: false,
+  loading: () => (
+    <div className="absolute inset-0">
+      <Skeleton className="h-[520px] md:h-[640px]" />
+    </div>
+  ),
+})
+const PartnersCarousel = dynamic(() => import("@/components/partners-carousel").then(m => m.PartnersCarousel), {
+  ssr: false,
+  loading: () => (
+    <div className="h-28 md:h-32">
+      <Skeleton className="h-full w-full" />
+    </div>
+  ),
+})
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
