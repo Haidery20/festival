@@ -108,6 +108,10 @@ export async function POST(request: NextRequest) {
       skipEmails,
     } = body
 
+    // Normalize Series selections under Defender for consistency
+    const SERIES_MODEL_VALUES = new Set(["series-i", "series-ii", "series-iia", "series-iii"]) as Set<string>
+    const normalizedVehicleModel = SERIES_MODEL_VALUES.has(String(modelDescription)) ? "defender" : vehicleModel
+
     // Use provided registration number or generate one
     const effectiveRegistrationNumber = registrationNumber || generateRegistrationNumber()
 
@@ -170,7 +174,7 @@ export async function POST(request: NextRequest) {
           country,
           emergency_contact: emergencyContact,
           emergency_phone: emergencyPhone,
-          vehicle_model: vehicleModel,
+          vehicle_model: normalizedVehicleModel,
           vehicle_year: vehicleYear,
           model_description: modelDescription,
           engine_size: engineSize,
@@ -237,7 +241,7 @@ export async function POST(request: NextRequest) {
 
       // Prepare registration details
       const participantName = `${firstName} ${lastName}`
-      const vehicleInfo = `${vehicleYear} ${vehicleModel}`
+      const vehicleInfo = `${vehicleYear} ${normalizedVehicleModel}`
       const modelDescriptionText = (modelDescription as string) || ""
       const accommodationTypeText = (accommodationType as string) || ""
 
@@ -253,7 +257,7 @@ export async function POST(request: NextRequest) {
             lastName,
             email,
             phone,
-            vehicleModel,
+            vehicleModel: normalizedVehicleModel,
             vehicleYear,
             modelDescription: modelDescriptionText,
             accommodationType: accommodationTypeText,

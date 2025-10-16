@@ -13,6 +13,10 @@ import { useToast } from "@/hooks/use-toast"
 
 // Model-specific data
 const defenderModels = [
+  { value: "series-i", label: "Series I (1948–1958)" },
+  { value: "series-ii", label: "Series II (1958–1961)" },
+  { value: "series-iia", label: "Series IIA (1961–1971)" },
+  { value: "series-iii", label: "Series III (1971–1985)" },
   { value: "defender-90", label: "Defender 90" },
   { value: "defender-110", label: "Defender 110" },
   { value: "defender-130", label: "Defender 130" },
@@ -60,10 +64,6 @@ const modelDescriptions: Record<string, { value: string; label: string }[]> = {
     { value: "freelander-2", label: "Freelander 2 (2007–2014)" },
   ],
   other: [
-    { value: "series-i", label: "Series I (1948–1958)" },
-    { value: "series-ii", label: "Series II (1958–1961)" },
-    { value: "series-iia", label: "Series IIA (1961–1971)" },
-    { value: "series-iii", label: "Series III (1971–1985)" },
     { value: "santana", label: "Santana" },
     { value: "custom", label: "Custom Build / Other" },
   ],
@@ -309,6 +309,9 @@ export function RegistrationForm() {
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.vehicleModel === "defender" && (
+                  <p className="text-sm text-muted-foreground">Includes Series I, Series II, Series IIA, and Series III.</p>
+                )}
               </div>
 
               {/* Engine Size (visible for all models) */}
