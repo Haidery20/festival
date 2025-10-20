@@ -44,6 +44,16 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/kit" className="text-primary-foreground/80 hover:text-accent transition-colors">
+                  Festival Kit
+                </Link>
+              </li>
+              <li>
+                <Link href="/accommodations" className="text-primary-foreground/80 hover:text-accent transition-colors">
+                  Accommodations
+                </Link>
+              </li>
+              <li>
                 <Link href="/gallery" className="text-primary-foreground/80 hover:text-accent transition-colors">
                   Gallery
                 </Link>

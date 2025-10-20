@@ -114,6 +114,7 @@ interface RegistrationData {
   modifications: string
 
   accommodationType: string
+  kitSelection: string
   dietaryRestrictions: string
   medicalConditions: string
   previousParticipation: boolean
@@ -142,6 +143,7 @@ export function RegistrationForm() {
     engineSize: "",
     modifications: "",
     accommodationType: "",
+    kitSelection: "",
     dietaryRestrictions: "",
     medicalConditions: "",
     previousParticipation: false,
@@ -165,6 +167,26 @@ export function RegistrationForm() {
       setAvailableYears(years)
     }
   }, [formData.vehicleModel])
+
+  // Prefill kit & accommodation from URL params
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const acc = params.get("accommodation")
+      const kit = params.get("kit")
+      if (acc) {
+        handleInputChange("accommodationType", acc)
+      }
+      if (kit) {
+        const kitMap: Record<string, string> = {
+          basic: "Basic Pack",
+          premium: "Premium Pack",
+          vip: "VIP Pack",
+        }
+        handleInputChange("kitSelection", kitMap[kit] || kit)
+      }
+    } catch {}
+  }, [])
 
   const handleInputChange = (field: keyof RegistrationData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -334,6 +356,38 @@ export function RegistrationForm() {
                   value={formData.modifications}
                   onChange={(e) => handleInputChange("modifications", e.target.value)}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Kit & Accommodation */}
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Kit & Accommodation</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Accommodation Type */}
+              <div className="space-y-2">
+                <Label>Accommodation</Label>
+                <Select value={formData.accommodationType} onValueChange={(v) => handleInputChange("accommodationType", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select accommodation" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="camping">On‑Site Camping</SelectItem>
+                    <SelectItem value="hotel-partner">Partner Hotels</SelectItem>
+                    <SelectItem value="self-arranged">Self‑Arranged</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Festival Kit Selection */}
+              <div className="space-y-2">
+                <Label>Festival Kit</Label>
+                <Select value={formData.kitSelection} onValueChange={(v) => handleInputChange("kitSelection", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select festival kit" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Basic Pack">Basic Pack</SelectItem>
+                    <SelectItem value="Premium Pack">Premium Pack</SelectItem>
+                    <SelectItem value="VIP Pack">VIP Pack</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

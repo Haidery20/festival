@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       modelDescription,
       // removed: licensePlate,
       accommodationType,
+      kitSelection,
     } = body
 
     // Create a new PDF document
@@ -134,6 +135,8 @@ export async function POST(request: NextRequest) {
     doc.text("Location: Iringa Region, Tanzania", 20, yPosition)
     yPosition += 7
     doc.text(`Accommodation: ${accommodationType}`, 20, yPosition)
+    yPosition += 7
+    doc.text(`Festival Kit: ${kitSelection || "N/A"}` , 20, yPosition)
     yPosition += 15
     
     // Important Notes
@@ -222,6 +225,7 @@ export async function GET(request: NextRequest) {
       vehicleYear: "1997",
       modelDescription: "90",
       accommodationType: "Camping",
+      kitSelection: "Premium Pack",
     }
 
     const doc = new jsPDF()
@@ -346,6 +350,8 @@ export async function GET(request: NextRequest) {
     doc.text("Location: Iringa Region, Tanzania", 20, yPosition)
     yPosition += 7
     doc.text(`Accommodation: ${sample.accommodationType}`, 20, yPosition)
+    yPosition += 7
+    doc.text(`Festival Kit: ${sample.kitSelection || "N/A"}`, 20, yPosition)
     yPosition += 15
 
     doc.setFont("helvetica", "bold")

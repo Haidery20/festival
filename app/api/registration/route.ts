@@ -103,6 +103,8 @@ export async function POST(request: NextRequest) {
       insuranceConfirmed,
       safetyAcknowledged,
       mediaConsent,
+      // New optional kit selection
+      kitSelection,
       // removed: licensePlate,
       registrationNumber,
       skipEmails,
@@ -242,8 +244,9 @@ export async function POST(request: NextRequest) {
       // Prepare registration details
       const participantName = `${firstName} ${lastName}`
       const vehicleInfo = `${vehicleYear} ${normalizedVehicleModel}`
-      const modelDescriptionText = (modelDescription as string) || ""
-      const accommodationTypeText = (accommodationType as string) || ""
+    const modelDescriptionText = (modelDescription as string) || ""
+    const accommodationTypeText = (accommodationType as string) || ""
+    const kitSelectionText = (kitSelection as string) || ""
 
       // Generate registration PDF via internal API
       let pdfAttachment: { filename: string; content: Buffer } | null = null
@@ -261,6 +264,7 @@ export async function POST(request: NextRequest) {
             vehicleYear,
             modelDescription: modelDescriptionText,
             accommodationType: accommodationTypeText,
+            kitSelection: kitSelectionText,
           }),
         })
 
@@ -293,6 +297,7 @@ export async function POST(request: NextRequest) {
           <p><strong>Phone:</strong> ${phone}</p>
           <p><strong>Vehicle:</strong> ${vehicleInfo}${modelDescriptionText ? ` (${modelDescriptionText})` : ""}</p>
           <p><strong>Accommodation:</strong> ${accommodationTypeText || "N/A"}</p>
+          <p><strong>Festival Kit:</strong> ${kitSelectionText || "N/A"}</p>
           <hr/>
           <p>Submitted at: ${new Date().toLocaleString()}</p>
         `,
@@ -308,6 +313,8 @@ export async function POST(request: NextRequest) {
           <p>Thank you for registering for the Land Rover Festival Tanzania 2025.</p>
           <p><strong>Your registration number:</strong> ${effectiveRegistrationNumber}</p>
           <p><strong>Vehicle:</strong> ${vehicleInfo}${modelDescriptionText ? ` (${modelDescriptionText})` : ""}</p>
+          <p><strong>Accommodation:</strong> ${accommodationTypeText || "N/A"}</p>
+          <p><strong>Festival Kit:</strong> ${kitSelectionText || "N/A"}</p>
           <p>We've attached your registration confirmation PDF. Please keep it for your records and bring it to the festival.</p>
           <p>If you need assistance, contact us at info@landroverfestival.co.tz.</p>
           <p>Best regards,<br/>Land Rover Festival Tanzania Team</p>
@@ -607,6 +614,7 @@ export async function PUT(request: NextRequest) {
           vehicleYear: record.vehicle_year,
           modelDescription: record.model_description,
           accommodationType: record.accommodation_type,
+          kitSelection: record.kit_selection || "",
         }),
       })
       if (pdfRes.ok) {
@@ -634,6 +642,8 @@ export async function PUT(request: NextRequest) {
         <p><strong>Name:</strong> ${participantName || "N/A"}</p>
         <p><strong>Email:</strong> ${record.email}</p>
         <p><strong>Vehicle:</strong> ${vehicleInfo || "N/A"}</p>
+        <p><strong>Accommodation:</strong> ${record.accommodation_type || "N/A"}</p>
+        <p><strong>Festival Kit:</strong> ${record.kit_selection || "N/A"}</p>
         <hr/>
         <p>Resent at: ${new Date().toLocaleString()}</p>
       `,
@@ -648,6 +658,8 @@ export async function PUT(request: NextRequest) {
         <p>Here is your registration confirmation.</p>
         <p><strong>Your registration number:</strong> ${record.registration_number}</p>
         <p><strong>Vehicle:</strong> ${vehicleInfo || "N/A"}</p>
+        <p><strong>Accommodation:</strong> ${record.accommodation_type || "N/A"}</p>
+        <p><strong>Festival Kit:</strong> ${record.kit_selection || "N/A"}</p>
         <p>We've attached your registration confirmation PDF.</p>
         <p>If you need assistance, contact us at info@landroverfestival.co.tz.</p>
         <p>Best regards,<br/>Land Rover Festival Tanzania Team</p>
