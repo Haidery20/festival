@@ -105,6 +105,13 @@ export async function POST(request: NextRequest) {
       mediaConsent,
       // New optional kit selection
       kitSelection,
+      // New kit pricing & sizes
+      kitPrice,
+      kitVariant,
+      kitTshirtSize,
+      kitTshirtSize1,
+      kitTshirtSize2,
+      kitShirtSize,
       // removed: licensePlate,
       registrationNumber,
       skipEmails,
@@ -247,6 +254,30 @@ export async function POST(request: NextRequest) {
     const modelDescriptionText = (modelDescription as string) || ""
     const accommodationTypeText = (accommodationType as string) || ""
     const kitSelectionText = (kitSelection as string) || ""
+    const kitPriceText = (kitPrice as string) || ""
+    const kitVariantText = (kitVariant as string) || ""
+    const kitTshirtSizeText = (kitTshirtSize as string) || ""
+    const kitTshirtSize1Text = (kitTshirtSize1 as string) || ""
+    const kitTshirtSize2Text = (kitTshirtSize2 as string) || ""
+    const kitShirtSizeText = (kitShirtSize as string) || ""
+
+    // Compose a friendly kit details string
+    const kitDetailsText = (() => {
+      if (kitPriceText === "30000") {
+        return `TZS 30,000 — 1 T‑shirt (Size: ${kitTshirtSizeText || "N/A"})`
+      }
+      if (kitPriceText === "50000") {
+        if (kitVariantText === "two-ts") {
+          const sizes = [kitTshirtSize1Text, kitTshirtSize2Text].filter(Boolean).join(", ") || "N/A"
+          return `TZS 50,000 — Two T‑shirts (Sizes: ${sizes})`
+        }
+        if (kitVariantText === "tshirt-shirt") {
+          return `TZS 50,000 — T‑shirt + Shirt (T: ${kitTshirtSize1Text || "N/A"}, Shirt: ${kitShirtSizeText || "N/A"})`
+        }
+        return `TZS 50,000`
+      }
+      return kitSelectionText || ""
+    })()
 
       // Generate registration PDF via internal API
       let pdfAttachment: { filename: string; content: Buffer } | null = null
@@ -264,7 +295,7 @@ export async function POST(request: NextRequest) {
             vehicleYear,
             modelDescription: modelDescriptionText,
             accommodationType: accommodationTypeText,
-            kitSelection: kitSelectionText,
+            kitSelection: kitDetailsText,
           }),
         })
 
@@ -297,7 +328,7 @@ export async function POST(request: NextRequest) {
           <p><strong>Phone:</strong> ${phone}</p>
           <p><strong>Vehicle:</strong> ${vehicleInfo}${modelDescriptionText ? ` (${modelDescriptionText})` : ""}</p>
           <p><strong>Accommodation:</strong> ${accommodationTypeText || "N/A"}</p>
-          <p><strong>Festival Kit:</strong> ${kitSelectionText || "N/A"}</p>
+          <p><strong>Festival Kit:</strong> ${kitDetailsText || "N/A"}</p>
           <hr/>
           <p>Submitted at: ${new Date().toLocaleString()}</p>
         `,
@@ -314,7 +345,8 @@ export async function POST(request: NextRequest) {
           <p><strong>Your registration number:</strong> ${effectiveRegistrationNumber}</p>
           <p><strong>Vehicle:</strong> ${vehicleInfo}${modelDescriptionText ? ` (${modelDescriptionText})` : ""}</p>
           <p><strong>Accommodation:</strong> ${accommodationTypeText || "N/A"}</p>
-          <p><strong>Festival Kit:</strong> ${kitSelectionText || "N/A"}</p>
+-          <p><strong>Festival Kit:</strong> ${kitSelectionText || "N/A"}</p>
++          <p><strong>Festival Kit:</strong> ${kitDetailsText || "N/A"}</p>
           <p>We've attached your registration confirmation PDF. Please keep it for your records and bring it to the festival.</p>
           <p>If you need assistance, contact us at info@landroverfestival.co.tz.</p>
           <p>Best regards,<br/>Land Rover Festival Tanzania Team</p>

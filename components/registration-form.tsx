@@ -84,6 +84,8 @@ const engineSizes = [
   { value: "other", label: "Other" },
 ]
 
+// Apparel sizes S to XXXL
+const apparelSizes = ["S", "M", "L", "XL", "XXL", "XXXL"]
 const modelYears = {
   defender: Array.from({ length: 2025 - 1948 + 1 }, (_, i) => (2025 - i).toString()),
   discovery: Array.from({ length: 2025 - 1989 + 1 }, (_, i) => (2025 - i).toString()),
@@ -115,6 +117,26 @@ interface RegistrationData {
 
   accommodationType: string
   kitSelection: string
+  kitPrice: string
+  kitVariant: string
+  kitTshirtSize: string
+  kitTshirtSize1: string
+  kitTshirtSize2: string
+  kitShirtSize: string
+  // New accommodation details
+  accDurationOption: string
+  accStartDate: string
+  accEndDate: string
+  accNights: string
+  accAdults: string
+  accChildren: string
+  accGearOption: string
+  accTentPrice: string
+  accAdditionalMattressCount: string
+  ruahaTripType: string
+  ruahaStartDate: string
+  ruahaEndDate: string
+
   dietaryRestrictions: string
   medicalConditions: string
   previousParticipation: boolean
@@ -144,6 +166,25 @@ export function RegistrationForm() {
     modifications: "",
     accommodationType: "",
     kitSelection: "",
+    kitPrice: "",
+    kitVariant: "",
+    kitTshirtSize: "",
+    kitTshirtSize1: "",
+    kitTshirtSize2: "",
+    kitShirtSize: "",
+    // New accommodation details
+    accDurationOption: "",
+    accStartDate: "",
+    accEndDate: "",
+    accNights: "",
+    accAdults: "",
+    accChildren: "",
+    accGearOption: "",
+    accTentPrice: "",
+    accAdditionalMattressCount: "",
+    ruahaTripType: "",
+    ruahaStartDate: "",
+    ruahaEndDate: "",
     dietaryRestrictions: "",
     medicalConditions: "",
     previousParticipation: false,
@@ -183,7 +224,13 @@ export function RegistrationForm() {
           premium: "Premium Pack",
           vip: "VIP Pack",
         }
+        const priceMap: Record<string, string> = {
+          basic: "30000",
+          premium: "50000",
+          vip: "50000",
+        }
         handleInputChange("kitSelection", kitMap[kit] || kit)
+        if (priceMap[kit]) handleInputChange("kitPrice", priceMap[kit])
       }
     } catch {}
   }, [])
@@ -367,28 +414,290 @@ export function RegistrationForm() {
               {/* Accommodation Type */}
               <div className="space-y-2">
                 <Label>Accommodation</Label>
-                <Select value={formData.accommodationType} onValueChange={(v) => handleInputChange("accommodationType", v)}>
+                <Select value={formData.accommodationType} onValueChange={(v) => {
+                  handleInputChange("accommodationType", v)
+                  // Reset dependent fields when accommodation changes
+                  handleInputChange("accDurationOption", "")
+                  handleInputChange("accStartDate", "")
+                  handleInputChange("accEndDate", "")
+                  handleInputChange("accNights", "")
+                  handleInputChange("accAdults", "")
+                  handleInputChange("accChildren", "")
+                  handleInputChange("accGearOption", "")
+                  handleInputChange("accTentPrice", "")
+                  handleInputChange("accAdditionalMattressCount", "")
+                  handleInputChange("ruahaTripType", "")
+                  handleInputChange("ruahaStartDate", "")
+                  handleInputChange("ruahaEndDate", "")
+                }}>
                   <SelectTrigger><SelectValue placeholder="Select accommodation" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="camping">On‑Site Camping</SelectItem>
-                    <SelectItem value="hotel-partner">Partner Hotels</SelectItem>
+                    {/* Confirmed accommodation options */}
+                    <SelectItem value="river-valley">River Valley</SelectItem>
+                    <SelectItem value="ruaha-national-park">Ruaha National Park</SelectItem>
                     <SelectItem value="self-arranged">Self‑Arranged</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Festival Kit Selection */}
+              {/* Festival Kit Pricing */}
               <div className="space-y-2">
                 <Label>Festival Kit</Label>
-                <Select value={formData.kitSelection} onValueChange={(v) => handleInputChange("kitSelection", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select festival kit" /></SelectTrigger>
+                <Select
+                  value={formData.kitPrice}
+                  onValueChange={(v) => {
+                    handleInputChange("kitPrice", v)
+                    // Clear dependent fields when price changes
+                    handleInputChange("kitVariant", "")
+                    handleInputChange("kitTshirtSize", "")
+                    handleInputChange("kitTshirtSize1", "")
+                    handleInputChange("kitTshirtSize2", "")
+                    handleInputChange("kitShirtSize", "")
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select price option" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Basic Pack">Basic Pack</SelectItem>
-                    <SelectItem value="Premium Pack">Premium Pack</SelectItem>
-                    <SelectItem value="VIP Pack">VIP Pack</SelectItem>
+                    <SelectItem value="30000">TZS 30,000 — 1 T‑shirt</SelectItem>
+                    <SelectItem value="50000">TZS 50,000 — Two T‑shirts or T‑shirt + Shirt</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Dynamic selections based on price */}
+              {formData.kitPrice === "30000" && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>T‑shirt Size</Label>
+                  <Select value={formData.kitTshirtSize} onValueChange={(v) => handleInputChange("kitTshirtSize", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select T‑shirt size" /></SelectTrigger>
+                    <SelectContent>
+                      {apparelSizes.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {formData.kitPrice === "50000" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Package Choice</Label>
+                    <Select
+                      value={formData.kitVariant}
+                      onValueChange={(v) => {
+                        handleInputChange("kitVariant", v)
+                        // Clear size fields when variant changes
+                        handleInputChange("kitTshirtSize1", "")
+                        handleInputChange("kitTshirtSize2", "")
+                        handleInputChange("kitShirtSize", "")
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="two-ts">Two T‑shirts</SelectItem>
+                        <SelectItem value="tshirt-shirt">T‑shirt + Shirt</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.kitVariant === "two-ts" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                      <div className="space-y-2">
+                        <Label>T‑shirt Size #1</Label>
+                        <Select value={formData.kitTshirtSize1} onValueChange={(v) => handleInputChange("kitTshirtSize1", v)}>
+                          <SelectTrigger><SelectValue placeholder="Select size" /></SelectTrigger>
+                          <SelectContent>
+                            {apparelSizes.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>T‑shirt Size #2</Label>
+                        <Select value={formData.kitTshirtSize2} onValueChange={(v) => handleInputChange("kitTshirtSize2", v)}>
+                          <SelectTrigger><SelectValue placeholder="Select size" /></SelectTrigger>
+                          <SelectContent>
+                            {apparelSizes.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.kitVariant === "tshirt-shirt" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                      <div className="space-y-2">
+                        <Label>T‑shirt Size</Label>
+                        <Select value={formData.kitTshirtSize1} onValueChange={(v) => handleInputChange("kitTshirtSize1", v)}>
+                          <SelectTrigger><SelectValue placeholder="Select T‑shirt size" /></SelectTrigger>
+                          <SelectContent>
+                            {apparelSizes.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Shirt Size</Label>
+                        <Select value={formData.kitShirtSize} onValueChange={(v) => handleInputChange("kitShirtSize", v)}>
+                          <SelectTrigger><SelectValue placeholder="Select shirt size" /></SelectTrigger>
+                          <SelectContent>
+                            {apparelSizes.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {formData.accommodationType === "river-valley" && (
+                <div className="md:col-span-2 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nights</Label>
+                      <Select value={formData.accNights} onValueChange={(v) => handleInputChange("accNights", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select nights" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 night</SelectItem>
+                          <SelectItem value="2">2 nights</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Adults</Label>
+                      <Input type="number" min={0} value={formData.accAdults} onChange={(e) => handleInputChange("accAdults", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Watoto (Children)</Label>
+                      <Input type="number" min={0} value={formData.accChildren} onChange={(e) => handleInputChange("accChildren", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Camping Gears</Label>
+                      <Select value={formData.accGearOption} onValueChange={(v) => {
+                        handleInputChange("accGearOption", v)
+                        if (v !== "ours") {
+                          handleInputChange("accTentPrice", "")
+                          handleInputChange("accAdditionalMattressCount", "")
+                          
+                        }
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Select gear option" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">Personal Gears</SelectItem>
+                          <SelectItem value="ours">Vendor Gears</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {formData.accGearOption === "ours" && (
+                      <div className="space-y-2">
+                        <Label>Tent Price</Label>
+                        <Select value={formData.accTentPrice} onValueChange={(v) => handleInputChange("accTentPrice", v)}>
+                          <SelectTrigger><SelectValue placeholder="Select tent price" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="50000">TZS 50,000 — Single mattress</SelectItem>
+                            <SelectItem value="30000">TZS 30,000 — Single mattress</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {formData.accGearOption === "ours" && (
+                      <div className="space-y-2">
+                        <Label>Additional Mattress (TZS 10,000 each)</Label>
+                        <Input type="number" min={0} value={formData.accAdditionalMattressCount} onChange={(e) => handleInputChange("accAdditionalMattressCount", e.target.value)} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {formData.accommodationType === "ruaha-national-park" && (
+                <div className="md:col-span-2 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Trip Type</Label>
+                      <Select value={formData.ruahaTripType} onValueChange={(v) => {
+                        handleInputChange("ruahaTripType", v)
+                        if (v !== "camping") {
+                          handleInputChange("ruahaStartDate", "")
+                          handleInputChange("ruahaEndDate", "")
+                          handleInputChange("accGearOption", "")
+                          handleInputChange("accTentPrice", "")
+                          handleInputChange("accAdditionalMattressCount", "")
+                        }
+                      }}>
+                        <SelectTrigger><SelectValue placeholder="Select trip type" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="day-trip">Day Trip</SelectItem>
+                          <SelectItem value="camping">Camping</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {formData.ruahaTripType === "camping" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Start Date</Label>
+                          <Input type="date" value={formData.ruahaStartDate} onChange={(e) => handleInputChange("ruahaStartDate", e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>End Date</Label>
+                          <Input type="date" value={formData.ruahaEndDate} onChange={(e) => handleInputChange("ruahaEndDate", e.target.value)} />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Adults</Label>
+                      <Input type="number" min={0} value={formData.accAdults} onChange={(e) => handleInputChange("accAdults", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Watoto (Children)</Label>
+                      <Input type="number" min={0} value={formData.accChildren} onChange={(e) => handleInputChange("accChildren", e.target.value)} />
+                    </div>
+                  </div>
+
+                  {formData.ruahaTripType === "camping" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Camping Gears</Label>
+                        <Select value={formData.accGearOption} onValueChange={(v) => {
+                          handleInputChange("accGearOption", v)
+                          if (v !== "ours") {
+                            handleInputChange("accTentPrice", "")
+                            handleInputChange("accAdditionalMattressCount", "")
+                          }
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="Select gear option" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="private">Personal Gears</SelectItem>
+                            <SelectItem value="ours">Vendor Gears</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {formData.accGearOption === "ours" && (
+                        <div className="space-y-2">
+                          <Label>Tent Price</Label>
+                          <Select value={formData.accTentPrice} onValueChange={(v) => handleInputChange("accTentPrice", v)}>
+                            <SelectTrigger><SelectValue placeholder="Select tent price" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="50000">TZS 50,000 — Single mattress</SelectItem>
+                              <SelectItem value="30000">TZS 30,000 — Single mattress</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {formData.accGearOption === "ours" && (
+                        <div className="space-y-2">
+                          <Label>Additional Mattress (TZS 10,000 each)</Label>
+                          <Input type="number" min={0} value={formData.accAdditionalMattressCount} onChange={(e) => handleInputChange("accAdditionalMattressCount", e.target.value)} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           </div>
 
