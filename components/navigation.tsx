@@ -32,12 +32,6 @@ export function Navigation() {
             <Link href="/about" className="text-foreground hover:text-primary transition-colors">
               About
             </Link>
-            <Link href="/kit" className="text-foreground hover:text-primary transition-colors">
-              Festival Kit
-            </Link>
-            <Link href="/accommodations" className="text-foreground hover:text-primary transition-colors">
-              Accommodations
-            </Link>
             {showGallery && (
               <Link href="/gallery" className="text-foreground hover:text-primary transition-colors">
                 Gallery
@@ -76,20 +70,6 @@ export function Navigation() {
                 onClick={() => setIsOpen(false)}
               >
                 About
-              </Link>
-              <Link
-                href="/kit"
-                className="block px-3 py-2 text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                Festival Kit
-              </Link>
-              <Link
-                href="/accommodations"
-                className="block px-3 py-2 text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                Accommodations
               </Link>
               {showGallery && (
                 <Link
