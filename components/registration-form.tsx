@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -222,6 +222,7 @@ export function RegistrationForm() {
   const [reservationId, setReservationId] = useState("")
   const { toast } = useToast()
   const [isReserving, setIsReserving] = useState(false)
+  const riverValleyRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (formData.vehicleModel) {
@@ -806,7 +807,7 @@ export function RegistrationForm() {
           </div>
 
           {formData.accommodationType === "river-valley" && (
-            <div className="mt-6">
+            <div className="mt-6" ref={riverValleyRef}>
               <h3 className="text-xl font-semibold mb-4">River Valley</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -814,7 +815,7 @@ export function RegistrationForm() {
                     <Label>Nights</Label>
                     <Select value={formData.accNights} onValueChange={(v) => handleInputChange("accNights", v)}>
                       <SelectTrigger><SelectValue placeholder="Select nights" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent container={riverValleyRef.current}>
                         <SelectItem value="1">1 night</SelectItem>
                         <SelectItem value="2">2 nights</SelectItem>
                       </SelectContent>
@@ -843,11 +844,10 @@ export function RegistrationForm() {
                       if (v !== "ours") {
                         handleInputChange("accTentPrice", "")
                         handleInputChange("accAdditionalMattressCount", "")
-                        
                       }
                     }}>
                       <SelectTrigger><SelectValue placeholder="Select gear option" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent container={riverValleyRef.current}>
                         <SelectItem value="private">Personal Gears</SelectItem>
                         <SelectItem value="ours">Vendor Gears</SelectItem>
                       </SelectContent>
@@ -858,7 +858,7 @@ export function RegistrationForm() {
                       <Label>Tent Price</Label>
                       <Select value={formData.accTentPrice} onValueChange={(v) => handleInputChange("accTentPrice", v)}>
                         <SelectTrigger><SelectValue placeholder="Select tent price" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent container={riverValleyRef.current}>
                           <SelectItem value="50000">TZS 50,000 — Single mattress</SelectItem>
                           <SelectItem value="30000">TZS 30,000 — Single mattress</SelectItem>
                         </SelectContent>
