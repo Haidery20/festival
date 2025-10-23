@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
       kitShirtSize,
       // removed: licensePlate,
       registrationNumber,
+      reservationId,
       skipEmails,
     } = body
 
@@ -323,6 +324,7 @@ export async function POST(request: NextRequest) {
         html: `
           <h2>New Registration</h2>
           <p><strong>Registration Number:</strong> ${effectiveRegistrationNumber}</p>
+          ${reservationId ? `<p><strong>Reservation ID:</strong> ${reservationId}</p>` : ""}
           <p><strong>Name:</strong> ${participantName}</p>
           <p><strong>Email:</strong> ${email}</p>
           <p><strong>Phone:</strong> ${phone}</p>
@@ -343,10 +345,10 @@ export async function POST(request: NextRequest) {
           <p>Hi ${firstName},</p>
           <p>Thank you for registering for the Land Rover Festival Tanzania 2025.</p>
           <p><strong>Your registration number:</strong> ${effectiveRegistrationNumber}</p>
+          ${reservationId ? `<p><strong>Your reservation ID:</strong> ${reservationId}</p>` : ""}
           <p><strong>Vehicle:</strong> ${vehicleInfo}${modelDescriptionText ? ` (${modelDescriptionText})` : ""}</p>
           <p><strong>Accommodation:</strong> ${accommodationTypeText || "N/A"}</p>
--          <p><strong>Festival Kit:</strong> ${kitSelectionText || "N/A"}</p>
-+          <p><strong>Festival Kit:</strong> ${kitDetailsText || "N/A"}</p>
+          <p><strong>Festival Kit:</strong> ${kitDetailsText || "N/A"}</p>
           <p>We've attached your registration confirmation PDF. Please keep it for your records and bring it to the festival.</p>
           <p>If you need assistance, contact us at info@landroverfestival.co.tz.</p>
           <p>Best regards,<br/>Land Rover Festival Tanzania Team</p>

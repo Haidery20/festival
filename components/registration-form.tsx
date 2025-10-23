@@ -219,6 +219,7 @@ export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [registrationNumber, setRegistrationNumber] = useState("")
+  const [reservationId, setReservationId] = useState("")
   const { toast } = useToast()
   const [isReserving, setIsReserving] = useState(false)
 
@@ -327,7 +328,7 @@ export function RegistrationForm() {
       const response = await fetch("/api/registration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, registrationNumber: regNumber }),
+        body: JSON.stringify({ ...formData, registrationNumber: regNumber, reservationId }),
       })
       if (response.ok) {
         setIsSubmitted(true)
@@ -378,6 +379,7 @@ export function RegistrationForm() {
 
       if (response.ok) {
         const data = await response.json()
+        setReservationId(data.reservationId || reservationId)
         toast({
           title: "Reservation created",
           description: `ID ${data.reservationId} — Expires ${new Date(data.expiresAt).toLocaleString()}`,
@@ -898,6 +900,9 @@ export function RegistrationForm() {
             <h4 className="font-semibold mb-2">Cart & Checkout</h4>
             <div className="text-sm text-muted-foreground space-y-1">
               <div className="font-semibold">Total: TZS {pricingTotal.toLocaleString()}</div>
+              {reservationId && (
+                <div className="text-xs">Reservation ID: <span className="font-mono">{reservationId}</span></div>
+              )}
               <div className="text-xs">We’ll hold your reservation for 7 days.</div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
