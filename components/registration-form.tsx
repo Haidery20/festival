@@ -243,11 +243,15 @@ export function RegistrationForm() {
       }
       if (kit) {
         const kitMap: Record<string, string> = {
+          silver: "Silver",
+          gold: "Gold",
           basic: "Basic Pack",
           premium: "Premium Pack",
           vip: "VIP Pack",
         }
         const priceMap: Record<string, string> = {
+          silver: "30000",
+          gold: "50000",
           basic: "30000",
           premium: "50000",
           vip: "50000",
@@ -276,7 +280,7 @@ export function RegistrationForm() {
 
   const entranceAdultTotal = adultsCount * ruahaDays * RUAHA_RATES.entrance.adult
   const entranceChildTotal = childrenCount * ruahaDays * RUAHA_RATES.entrance.child
-  const entranceVehicleTotal = vehiclesCount * RUAHA_RATES.entrance.vehicle
+  const entranceVehicleTotal = vehiclesCount * ruahaDays * RUAHA_RATES.entrance.vehicle
 
   const lodgingRate = (RUAHA_RATES.lodging as any)[formData.ruahaLodgingType] || 0
   const lodgingUnits = Number(formData.ruahaUnits || 0)
@@ -291,8 +295,9 @@ export function RegistrationForm() {
 
   const pricingDetails = [
     `Entrance — Adults ${adultsCount} × ${ruahaDays} × 5,900 = ${entranceAdultTotal.toLocaleString()}`,
-    `Entrance — Children ${childrenCount} × ${ruahaDays} × 2,360 = ${entranceChildTotal.toLocaleString()}`,
-    `Entrance — Vehicle ${vehiclesCount} × 41,000 = ${entranceVehicleTotal.toLocaleString()}`,
+-   `Entrance — Children ${childrenCount} × ${ruahaDays} × 2,360 = ${entranceChildTotal.toLocaleString()}`,
++   `Entrance — Children (5–15) ${childrenCount} × ${ruahaDays} × 2,360 = ${entranceChildTotal.toLocaleString()}`,
+    `Entrance — Vehicle ${vehiclesCount} × ${ruahaDays} × 41,000 = ${entranceVehicleTotal.toLocaleString()}`,
     formData.ruahaTripType === "camping" && formData.ruahaLodgingType
       ? `Lodging — ${String(formData.ruahaLodgingType).replace(/_/g, " ")} ${lodgingUnits} × ${lodgingNights} × ${lodgingRate.toLocaleString()} = ${lodgingTotal.toLocaleString()}`
       : "",
@@ -454,6 +459,7 @@ export function RegistrationForm() {
                   value={formData.kitPrice}
                   onValueChange={(v) => {
                     handleInputChange("kitPrice", v)
+                    handleInputChange("kitSelection", v === "30000" ? "Silver" : v === "50000" ? "Gold" : "")
                     handleInputChange("kitVariant", "")
                     handleInputChange("kitTshirtSize", "")
                     handleInputChange("kitTshirtSize1", "")
@@ -463,8 +469,8 @@ export function RegistrationForm() {
                 >
                   <SelectTrigger><SelectValue placeholder="Select price option" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="30000">TZS 30,000 — 1 T‑shirt</SelectItem>
-                    <SelectItem value="50000">TZS 50,000 — Two T‑shirts or T‑shirt + Shirt</SelectItem>
+                    <SelectItem value="30000">Silver — TZS 30,000 (1 T‑shirt)</SelectItem>
+                    <SelectItem value="50000">Gold — TZS 50,000 (Two T‑shirts or T‑shirt + Shirt)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -665,6 +671,76 @@ export function RegistrationForm() {
             </div>
           </div>
 
+          {formData.accommodationType === "river-valley" && (
+            <div className="mt-6" ref={riverValleyRef}>
+              <h3 className="text-xl font-semibold mb-4">River Valley</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nights</Label>
+                    <Select value={formData.accNights} onValueChange={(v) => handleInputChange("accNights", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select nights" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 night</SelectItem>
+                        <SelectItem value="2">2 nights</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Adults</Label>
+                    <Input type="number" min={0} value={formData.accAdults} onChange={(e) => handleInputChange("accAdults", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Watoto (Children)</Label>
+                    <Input type="number" min={0} value={formData.accChildren} onChange={(e) => handleInputChange("accChildren", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vehicles</Label>
+                    <Input type="number" min={0} value={formData.ruahaVehicles} onChange={(e) => handleInputChange("ruahaVehicles", e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Camping Gears</Label>
+                    <Select value={formData.accGearOption} onValueChange={(v) => {
+                      handleInputChange("accGearOption", v)
+                      if (v !== "ours") {
+                        handleInputChange("accTentPrice", "")
+                        handleInputChange("accAdditionalMattressCount", "")
+                      }
+                    }}>
+                      <SelectTrigger><SelectValue placeholder="Select gear option" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="private">Personal Gears</SelectItem>
+                        <SelectItem value="ours">Vendor Gears</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.accGearOption === "ours" && (
+                    <div className="space-y-2">
+                      <Label>Tent Price</Label>
+                      <Select value={formData.accTentPrice} onValueChange={(v) => handleInputChange("accTentPrice", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select tent price" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="50000">TZS 50,000 — Single mattress</SelectItem>
+                          <SelectItem value="30000">TZS 30,000 — Single mattress</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {formData.accGearOption === "ours" && (
+                    <div className="space-y-2">
+                      <Label>Additional Mattress (TZS 10,000 each)</Label>
+                      <Input type="number" min={0} value={formData.accAdditionalMattressCount} onChange={(e) => handleInputChange("accAdditionalMattressCount", e.target.value)} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6">
             <h3 className="text-xl font-semibold mb-4">After Festival Trip — Ruaha National Park</h3>
             <div className="space-y-4">
@@ -708,8 +784,9 @@ export function RegistrationForm() {
                   <Input type="number" min={0} value={formData.accAdults} onChange={(e) => handleInputChange("accAdults", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Watoto (Children)</Label>
+                  <Label>Watoto (Children, 5–15 years)</Label>
                   <Input type="number" min={0} value={formData.accChildren} onChange={(e) => handleInputChange("accChildren", e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Under 5 are free; exclude them.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Vehicles</Label>
@@ -788,7 +865,7 @@ export function RegistrationForm() {
                 <div className="text-sm text-muted-foreground space-y-1">
                   <div>Entrance — Adults: {adultsCount} × {ruahaDays} × 5,900 = {entranceAdultTotal.toLocaleString()}</div>
                   <div>Entrance — Children: {childrenCount} × {ruahaDays} × 2,360 = {entranceChildTotal.toLocaleString()}</div>
-                  <div>Entrance — Vehicle: {vehiclesCount} × 41,000 = {entranceVehicleTotal.toLocaleString()}</div>
+                  <div>Entrance — Vehicle: {vehiclesCount} × {ruahaDays} × 41,000 = {entranceVehicleTotal.toLocaleString()}</div>
                   {formData.ruahaTripType === "camping" && formData.ruahaLodgingType && (
                     <div>
                       Lodging — {String(formData.ruahaLodgingType).replace(/_/g, " ")}: {lodgingUnits} × {lodgingNights} × {lodgingRate.toLocaleString()} = {lodgingTotal.toLocaleString()}
@@ -815,7 +892,7 @@ export function RegistrationForm() {
                     <Label>Nights</Label>
                     <Select value={formData.accNights} onValueChange={(v) => handleInputChange("accNights", v)}>
                       <SelectTrigger><SelectValue placeholder="Select nights" /></SelectTrigger>
-                      <SelectContent container={riverValleyRef.current}>
+                      <SelectContent>
                         <SelectItem value="1">1 night</SelectItem>
                         <SelectItem value="2">2 nights</SelectItem>
                       </SelectContent>
@@ -847,7 +924,7 @@ export function RegistrationForm() {
                       }
                     }}>
                       <SelectTrigger><SelectValue placeholder="Select gear option" /></SelectTrigger>
-                      <SelectContent container={riverValleyRef.current}>
+                      <SelectContent>
                         <SelectItem value="private">Personal Gears</SelectItem>
                         <SelectItem value="ours">Vendor Gears</SelectItem>
                       </SelectContent>
@@ -858,7 +935,7 @@ export function RegistrationForm() {
                       <Label>Tent Price</Label>
                       <Select value={formData.accTentPrice} onValueChange={(v) => handleInputChange("accTentPrice", v)}>
                         <SelectTrigger><SelectValue placeholder="Select tent price" /></SelectTrigger>
-                        <SelectContent container={riverValleyRef.current}>
+                        <SelectContent>
                           <SelectItem value="50000">TZS 50,000 — Single mattress</SelectItem>
                           <SelectItem value="30000">TZS 30,000 — Single mattress</SelectItem>
                         </SelectContent>
@@ -903,14 +980,10 @@ export function RegistrationForm() {
               {reservationId && (
                 <div className="text-xs">Reservation ID: <span className="font-mono">{reservationId}</span></div>
               )}
-              <div className="text-xs">We’ll hold your reservation for 7 days.</div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+            <div className="grid grid-cols-1 gap-2 mt-3">
               <Button type="submit" className="w-full bg-primary hover:bg-primary/90 py-3" disabled={isSubmitting}>
                 {isSubmitting ? "Processing..." : "Complete Registration"}
-              </Button>
-              <Button type="button" variant="outline" className="w-full py-3" disabled={isReserving} onClick={handleReserveAndPay}>
-                {isReserving ? "Reserving..." : "Reserve & Pay (7 days)"}
               </Button>
             </div>
           </div>
