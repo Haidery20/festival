@@ -9,25 +9,25 @@ import { Gift, Shirt, Star } from "lucide-react"
 export default function FestivalKitPage() {
   const kits = [
     {
-      id: "basic",
-      name: "Basic Pack",
-      description: "Festival T‑shirt + Badge + Stickers",
-      details: ["Soft cotton T‑shirt", "Official participant badge", "Sticker set"],
+      id: "none",
+      name: "No Kit",
+      description: "Proceed without a festival kit",
+      details: ["No apparel or accessories included"],
+      badge: "Optional",
+    },
+    {
+      id: "silver",
+      name: "Silver",
+      description: "TZS 30,000 — 1 T‑shirt",
+      details: ["Soft cotton T‑shirt", "Official participant badge"],
       badge: "Popular",
     },
     {
-      id: "premium",
-      name: "Premium Pack",
-      description: "T‑shirt + Badge + Cap + Stickers",
-      details: ["Premium T‑shirt", "Cap", "Badge", "Stickers"],
+      id: "gold",
+      name: "Gold",
+      description: "TZS 50,000 — Two T‑shirts or T‑shirt + Shirt",
+      details: ["Two T‑shirts or T‑shirt + Shirt", "Official participant badge"],
       badge: "Recommended",
-    },
-    {
-      id: "vip",
-      name: "VIP Pack",
-      description: "Premium Jacket + T‑shirt + Badge + Cap + Stickers",
-      details: ["Festival jacket", "Premium T‑shirt", "Cap", "Badge", "Stickers"],
-      badge: "Limited",
     },
   ]
 
@@ -62,19 +62,21 @@ export default function FestivalKitPage() {
               <ul className="text-sm text-muted-foreground list-disc ml-5 space-y-1">
                 {kit.details.map((d, i) => (<li key={i}>{d}</li>))}
               </ul>
-              <div className="mt-4 p-3 rounded-md bg-muted/40 border border-border/50">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Shirt className="w-4 h-4" />
-                  Available Sizes
+              {kit.id !== "none" && (
+                <div className="mt-4 p-3 rounded-md bg-muted/40 border border-border/50">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Shirt className="w-4 h-4" />
+                    Available Sizes
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {sizes.map((s) => (
+                      <span key={s} className="inline-flex items-center px-2 py-1 rounded border text-xs bg-background">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {sizes.map((s) => (
-                    <span key={s} className="inline-flex items-center px-2 py-1 rounded border text-xs bg-background">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              )}
               <div className="mt-6">
                 <Button asChild className="w-full">
                   <Link href={{ pathname: "/register", query: { kit: kit.id } }}>Select {kit.name} & Register</Link>

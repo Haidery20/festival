@@ -88,7 +88,10 @@ const engineSizes = [
 const apparelSizes = ["S", "M", "L", "XL", "XXL", "XXXL"]
 // Add Ruaha pricing constants
 const RUAHA_RATES = {
-  entrance: { adult: 5900, child: 2360, vehicle: 41000 },
+  entrance: {
+    day: { adult: 5900, child: 2360, vehicle: 41000 },
+    camping: { adult: 17700, child: 7080, vehicle: 41000 },
+  },
   lodging: {
     bandas: 17700,
     hostel: 23600,
@@ -96,6 +99,12 @@ const RUAHA_RATES = {
     cottage_single_no_living: 29000,
     cottage_family: 59000,
     public_camping_no_tent: 5900,
+  },
+}
+const RIVER_VALLEY_RATES = {
+  lodging: {
+    adult_per_night: 0,
+    child_5_15_per_night: 0,
   },
 }
 const modelYears = {
@@ -145,10 +154,15 @@ interface RegistrationData {
   accGearOption: string
   accTentPrice: string
   accAdditionalMattressCount: string
+  // Independent counts for Ruaha section
+  ruahaAdults: string
+  ruahaChildren: string
   ruahaTripType: string
   ruahaStartDate: string
   ruahaEndDate: string
   ruahaVehicles: string
+  // Separate River Valley vehicles to avoid cross-population
+  rvVehicles: string
   ruahaLodgingType: string
   ruahaUnits: string
   ruahaNights: string
@@ -198,10 +212,15 @@ export function RegistrationForm() {
     accGearOption: "",
     accTentPrice: "",
     accAdditionalMattressCount: "",
+    // New independent Ruaha counts
+    ruahaAdults: "",
+    ruahaChildren: "",
     ruahaTripType: "",
     ruahaStartDate: "",
     ruahaEndDate: "",
     ruahaVehicles: "",
+    // Separate River Valley vehicles field (not used in totals)
+    rvVehicles: "",
     ruahaLodgingType: "",
     ruahaUnits: "",
     ruahaNights: "",
@@ -243,21 +262,16 @@ export function RegistrationForm() {
       }
       if (kit) {
         const kitMap: Record<string, string> = {
+          none: "None",
           silver: "Silver",
           gold: "Gold",
-          basic: "Basic Pack",
-          premium: "Premium Pack",
-          vip: "VIP Pack",
         }
         const priceMap: Record<string, string> = {
           silver: "30000",
           gold: "50000",
-          basic: "30000",
-          premium: "50000",
-          vip: "50000",
         }
-        handleInputChange("kitSelection", kitMap[kit] || kit)
-        if (priceMap[kit]) handleInputChange("kitPrice", priceMap[kit])
+        handleInputChange("kitSelection", kitMap[kit] || "")
+        handleInputChange("kitPrice", priceMap[kit] || "none")
       }
     } catch {}
   }, [])
@@ -265,22 +279,43 @@ export function RegistrationForm() {
   // Compute Ruaha days/nights and pricing preview
   const parseDate = (s: string) => (s ? new Date(`${s}T00:00:00`) : null)
   const ruahaDays = (() => {
-    // Day trip counts as 1 day automatically
-    if (formData.ruahaTripType === "day-trip") return 1
+    // Treat anything that's not camping (including blank) as a 1-day trip
+    if (formData.ruahaTripType !== "camping") return 1
     const s = parseDate(formData.ruahaStartDate)
     const e = parseDate(formData.ruahaEndDate)
     if (!s || !e || e < s) return 0
     return Math.floor((e.getTime() - s.getTime()) / 86400000) + 1
   })()
   const ruahaNightsComputed = Math.max(ruahaDays - 1, 0)
+  const riverValleyNights = Number(formData.accNights || 0)
 
-  const adultsCount = Number(formData.accAdults || 0)
-  const childrenCount = Number(formData.accChildren || 0)
+  // Separate counts for River Valley and Ruaha to prevent cross-population
+  const riverValleyAdults = Number(formData.accAdults || 0)
+  const riverValleyChildren = Number(formData.accChildren || 0)
+  const ruahaAdultsRaw = Number(formData.ruahaAdults || 0)
+  const ruahaChildrenRaw = Number(formData.ruahaChildren || 0)
+  // Fall back to River Valley counts when Ruaha counts are blank
+  const effectiveRuahaAdults = ruahaAdultsRaw || riverValleyAdults
+  const effectiveRuahaChildren = ruahaChildrenRaw || riverValleyChildren
+  // Default vehicles to 1 unless explicitly provided
   const vehiclesCount = Number(formData.ruahaVehicles || 1)
 
-  const entranceAdultTotal = adultsCount * ruahaDays * RUAHA_RATES.entrance.adult
-  const entranceChildTotal = childrenCount * ruahaDays * RUAHA_RATES.entrance.child
-  const entranceVehicleTotal = vehiclesCount * ruahaDays * RUAHA_RATES.entrance.vehicle
+  const isCampingTrip = formData.ruahaTripType === "camping"
+  const entranceRates = isCampingTrip ? RUAHA_RATES.entrance.camping : RUAHA_RATES.entrance.day
+  const entranceAdultTotal = effectiveRuahaAdults * ruahaDays * entranceRates.adult
+  const entranceChildTotal = effectiveRuahaChildren * ruahaDays * entranceRates.child
+  const entranceVehicleTotal = vehiclesCount * ruahaDays * entranceRates.vehicle
+
+  // River Valley lodging totals
+  const riverValleyAdultLodgingTotal =
+    formData.accommodationType === "river-valley"
+      ? riverValleyAdults * riverValleyNights * RIVER_VALLEY_RATES.lodging.adult_per_night
+      : 0
+  const riverValleyChildLodgingTotal =
+    formData.accommodationType === "river-valley"
+      ? riverValleyChildren * riverValleyNights * RIVER_VALLEY_RATES.lodging.child_5_15_per_night
+      : 0
+  const riverValleyLodgingTotal = riverValleyAdultLodgingTotal + riverValleyChildLodgingTotal
 
   const lodgingRate = (RUAHA_RATES.lodging as any)[formData.ruahaLodgingType] || 0
   const lodgingUnits = Number(formData.ruahaUnits || 0)
@@ -290,17 +325,25 @@ export function RegistrationForm() {
   const gearVendorTotal = formData.accGearOption === "ours" && formData.ruahaTripType === "camping"
     ? Number(formData.accTentPrice || 0) + Number(formData.accAdditionalMattressCount || 0) * 10000
     : 0
-  const kitTotal = Number(formData.kitPrice || 0)
-  const pricingTotal = entranceAdultTotal + entranceChildTotal + entranceVehicleTotal + lodgingTotal + gearVendorTotal + kitTotal
+  const riverValleyGearTotal =
+    formData.accommodationType === "river-valley" && formData.accGearOption === "ours"
+      ? Number(formData.accTentPrice || 0) + Number(formData.accAdditionalMattressCount || 0) * 10000
+      : 0
+  // Treat non-numeric kitPrice values (e.g., "none") as 0
+  const kitTotal = formData.kitPrice && /^\d+$/.test(formData.kitPrice) ? Number(formData.kitPrice) : 0
+  const pricingTotal = entranceAdultTotal + entranceChildTotal + entranceVehicleTotal + lodgingTotal + gearVendorTotal + riverValleyLodgingTotal + riverValleyGearTotal + kitTotal
 
   const pricingDetails = [
-    `Entrance — Adults ${adultsCount} × ${ruahaDays} × 5,900 = ${entranceAdultTotal.toLocaleString()}`,
--   `Entrance — Children ${childrenCount} × ${ruahaDays} × 2,360 = ${entranceChildTotal.toLocaleString()}`,
-+   `Entrance — Children (5–15) ${childrenCount} × ${ruahaDays} × 2,360 = ${entranceChildTotal.toLocaleString()}`,
-    `Entrance — Vehicle ${vehiclesCount} × ${ruahaDays} × 41,000 = ${entranceVehicleTotal.toLocaleString()}`,
+    `Entrance — Adults ${effectiveRuahaAdults} × ${ruahaDays} × ${entranceRates.adult.toLocaleString()} = ${entranceAdultTotal.toLocaleString()}`,
+    `Entrance — Children (5–15) ${effectiveRuahaChildren} × ${ruahaDays} × ${entranceRates.child.toLocaleString()} = ${entranceChildTotal.toLocaleString()}`,
+    `Entrance — Vehicle ${vehiclesCount} × ${ruahaDays} × ${entranceRates.vehicle.toLocaleString()} = ${entranceVehicleTotal.toLocaleString()}`,
     formData.ruahaTripType === "camping" && formData.ruahaLodgingType
       ? `Lodging — ${String(formData.ruahaLodgingType).replace(/_/g, " ")} ${lodgingUnits} × ${lodgingNights} × ${lodgingRate.toLocaleString()} = ${lodgingTotal.toLocaleString()}`
       : "",
+    riverValleyLodgingTotal
+      ? `River Valley — Lodging: Adults ${riverValleyAdults} × ${riverValleyNights} × ${RIVER_VALLEY_RATES.lodging.adult_per_night.toLocaleString()} = ${riverValleyAdultLodgingTotal.toLocaleString()} | Children (5–15) ${riverValleyChildren} × ${riverValleyNights} × ${RIVER_VALLEY_RATES.lodging.child_5_15_per_night.toLocaleString()} = ${riverValleyChildLodgingTotal.toLocaleString()}`
+      : "",
+    riverValleyGearTotal ? `River Valley — Camping Gear — Vendor = ${riverValleyGearTotal.toLocaleString()}` : "",
     gearVendorTotal ? `Camping Gear — Vendor = ${gearVendorTotal.toLocaleString()}` : "",
     kitTotal ? `Festival Kit = ${kitTotal.toLocaleString()}` : "",
   ].filter(Boolean).join(" | ")
@@ -459,7 +502,7 @@ export function RegistrationForm() {
                   value={formData.kitPrice}
                   onValueChange={(v) => {
                     handleInputChange("kitPrice", v)
-                    handleInputChange("kitSelection", v === "30000" ? "Silver" : v === "50000" ? "Gold" : "")
+                    handleInputChange("kitSelection", v === "30000" ? "Silver" : v === "50000" ? "Gold" : v === "none" ? "None" : "")
                     handleInputChange("kitVariant", "")
                     handleInputChange("kitTshirtSize", "")
                     handleInputChange("kitTshirtSize1", "")
@@ -469,6 +512,7 @@ export function RegistrationForm() {
                 >
                   <SelectTrigger><SelectValue placeholder="Select price option" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="30000">Silver — TZS 30,000 (1 T‑shirt)</SelectItem>
                     <SelectItem value="50000">Gold — TZS 50,000 (Two T‑shirts or T‑shirt + Shirt)</SelectItem>
                   </SelectContent>
@@ -656,6 +700,7 @@ export function RegistrationForm() {
                   <SelectTrigger><SelectValue placeholder="Select accommodation" /></SelectTrigger>
                   <SelectContent>
                     {/* Confirmed accommodation options */}
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="river-valley">River Valley</SelectItem>
                     <SelectItem value="self-arranged">Self‑Arranged</SelectItem>
                   </SelectContent>
@@ -670,6 +715,7 @@ export function RegistrationForm() {
 
             </div>
           </div>
+
 
           {formData.accommodationType === "river-valley" && (
             <div className="mt-6" ref={riverValleyRef}>
@@ -698,7 +744,7 @@ export function RegistrationForm() {
                   </div>
                   <div className="space-y-2">
                     <Label>Vehicles</Label>
-                    <Input type="number" min={0} value={formData.ruahaVehicles} onChange={(e) => handleInputChange("ruahaVehicles", e.target.value)} />
+                    <Input type="number" min={0} value={formData.rvVehicles} onChange={(e) => handleInputChange("rvVehicles", e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -781,11 +827,11 @@ export function RegistrationForm() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Adults</Label>
-                  <Input type="number" min={0} value={formData.accAdults} onChange={(e) => handleInputChange("accAdults", e.target.value)} />
+                  <Input type="number" min={0} value={formData.ruahaAdults} onChange={(e) => handleInputChange("ruahaAdults", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Watoto (Children, 5–15 years)</Label>
-                  <Input type="number" min={0} value={formData.accChildren} onChange={(e) => handleInputChange("accChildren", e.target.value)} />
+                  <Input type="number" min={0} value={formData.ruahaChildren} onChange={(e) => handleInputChange("ruahaChildren", e.target.value)} />
                   <p className="text-xs text-muted-foreground">Under 5 are free; exclude them.</p>
                 </div>
                 <div className="space-y-2">
@@ -863,14 +909,23 @@ export function RegistrationForm() {
               <div className="mt-6 p-4 border rounded-md">
                 <h4 className="font-semibold mb-2">Pricing Summary</h4>
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <div>Entrance — Adults: {adultsCount} × {ruahaDays} × 5,900 = {entranceAdultTotal.toLocaleString()}</div>
-                  <div>Entrance — Children: {childrenCount} × {ruahaDays} × 2,360 = {entranceChildTotal.toLocaleString()}</div>
-                  <div>Entrance — Vehicle: {vehiclesCount} × {ruahaDays} × 41,000 = {entranceVehicleTotal.toLocaleString()}</div>
+                  <div>Entrance — Adults: {effectiveRuahaAdults} × {ruahaDays} × {entranceRates.adult.toLocaleString()} = {entranceAdultTotal.toLocaleString()}</div>
+                  <div>Entrance — Children (5–15): {effectiveRuahaChildren} × {ruahaDays} × {entranceRates.child.toLocaleString()} = {entranceChildTotal.toLocaleString()}</div>
+                  <div>Entrance — Vehicle: {vehiclesCount} × {ruahaDays} × {entranceRates.vehicle.toLocaleString()} = {entranceVehicleTotal.toLocaleString()}</div>
                   {formData.ruahaTripType === "camping" && formData.ruahaLodgingType && (
                     <div>
                       Lodging — {String(formData.ruahaLodgingType).replace(/_/g, " ")}: {lodgingUnits} × {lodgingNights} × {lodgingRate.toLocaleString()} = {lodgingTotal.toLocaleString()}
                     </div>
                   )}
+                  {formData.accommodationType === "river-valley" && (
+                    <>
+                      <div>River Valley — Lodging (Adults): {riverValleyAdults} × {riverValleyNights} × {RIVER_VALLEY_RATES.lodging.adult_per_night.toLocaleString()} = {riverValleyAdultLodgingTotal.toLocaleString()}</div>
+                      <div>River Valley — Lodging (Children 5–15): {riverValleyChildren} × {riverValleyNights} × {RIVER_VALLEY_RATES.lodging.child_5_15_per_night.toLocaleString()} = {riverValleyChildLodgingTotal.toLocaleString()}</div>
+                    </>
+                  )}
+                  {riverValleyGearTotal ? (
+                    <div>River Valley — Camping Gear — Vendor: {riverValleyGearTotal.toLocaleString()}</div>
+                  ) : null}
                   {gearVendorTotal ? (
                     <div>Camping Gear — Vendor: {gearVendorTotal.toLocaleString()}</div>
                   ) : null}
@@ -882,76 +937,6 @@ export function RegistrationForm() {
               </div>
             </div>
           </div>
-
-          {formData.accommodationType === "river-valley" && (
-            <div className="mt-6" ref={riverValleyRef}>
-              <h3 className="text-xl font-semibold mb-4">River Valley</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nights</Label>
-                    <Select value={formData.accNights} onValueChange={(v) => handleInputChange("accNights", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select nights" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 night</SelectItem>
-                        <SelectItem value="2">2 nights</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Adults</Label>
-                    <Input type="number" min={0} value={formData.accAdults} onChange={(e) => handleInputChange("accAdults", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Watoto (Children)</Label>
-                    <Input type="number" min={0} value={formData.accChildren} onChange={(e) => handleInputChange("accChildren", e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Vehicles</Label>
-                    <Input type="number" min={0} value={formData.ruahaVehicles} onChange={(e) => handleInputChange("ruahaVehicles", e.target.value)} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Camping Gears</Label>
-                    <Select value={formData.accGearOption} onValueChange={(v) => {
-                      handleInputChange("accGearOption", v)
-                      if (v !== "ours") {
-                        handleInputChange("accTentPrice", "")
-                        handleInputChange("accAdditionalMattressCount", "")
-                      }
-                    }}>
-                      <SelectTrigger><SelectValue placeholder="Select gear option" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="private">Personal Gears</SelectItem>
-                        <SelectItem value="ours">Vendor Gears</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {formData.accGearOption === "ours" && (
-                    <div className="space-y-2">
-                      <Label>Tent Price</Label>
-                      <Select value={formData.accTentPrice} onValueChange={(v) => handleInputChange("accTentPrice", v)}>
-                        <SelectTrigger><SelectValue placeholder="Select tent price" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="50000">TZS 50,000 — Single mattress</SelectItem>
-                          <SelectItem value="30000">TZS 30,000 — Single mattress</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  {formData.accGearOption === "ours" && (
-                    <div className="space-y-2">
-                      <Label>Additional Mattress (TZS 10,000 each)</Label>
-                      <Input type="number" min={0} value={formData.accAdditionalMattressCount} onChange={(e) => handleInputChange("accAdditionalMattressCount", e.target.value)} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Terms */}
           <div>
