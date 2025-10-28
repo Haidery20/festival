@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   openGraph: {
     images: ["/festivallogo.svg"],
   },
+  icons: {
+    icon: "/festivallogo.svg",
+    shortcut: "/festivallogo.svg",
+  },
   }
 export default function RootLayout({
   children,
