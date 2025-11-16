@@ -78,6 +78,10 @@ async function saveRegisteredEmail(email: string): Promise<void> {
 
 export async function POST(request: NextRequest) {
   try {
+    const isRegistrationOpen = process.env.REGISTRATION_OPEN === "true"
+    if (!isRegistrationOpen) {
+      return NextResponse.json({ error: "Registration is closed" }, { status: 403 })
+    }
     const body = await request.json()
     const {
       firstName,

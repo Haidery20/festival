@@ -8,6 +8,7 @@ import { Menu, X, Car, Mountain } from "lucide-react"
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const showGallery = false
+  const isRegistrationOpen = process.env.NEXT_PUBLIC_REGISTRATION_OPEN === "true"
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -32,6 +33,9 @@ export function Navigation() {
             <Link href="/about" className="text-foreground hover:text-primary transition-colors">
               About
             </Link>
+            <Link href="/cms" className="text-foreground hover:text-primary transition-colors">
+              CMS
+            </Link>
             {showGallery && (
               <Link href="/gallery" className="text-foreground hover:text-primary transition-colors">
                 Gallery
@@ -40,9 +44,15 @@ export function Navigation() {
             <Link href="/contact" className="text-foreground hover:text-primary transition-colors">
               Contact
             </Link>
-            <Button asChild className="bg-primary hover:bg-primary/90">
-              <Link href="/register">Register Now</Link>
-            </Button>
+            {isRegistrationOpen ? (
+              <Button asChild className="bg-primary hover:bg-primary/90">
+                <Link href="/register">Register Now</Link>
+              </Button>
+            ) : (
+              <Button disabled className="bg-gray-400">
+                Registration Closed
+              </Button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -80,6 +90,13 @@ export function Navigation() {
                   Gallery
                 </Link>
               )}
+              <Link
+                href="/cms"
+                className="block px-3 py-2 text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                CMS
+              </Link>
               <Link
                 href="/contact"
                 className="block px-3 py-2 text-foreground hover:text-primary transition-colors"

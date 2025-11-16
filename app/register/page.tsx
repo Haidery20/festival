@@ -8,6 +8,8 @@ export default function RegisterPage({
   searchParams?: { rn?: string }
 }) {
   const rn = searchParams?.rn
+  // Server-side env check: closed unless REGISTRATION_OPEN === "true"
+  const isRegistrationOpen = process.env.REGISTRATION_OPEN === "false"
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -117,7 +119,19 @@ export default function RegisterPage({
             </p>
           </div>
 
-          <RegistrationForm />
+          {isRegistrationOpen ? (
+            <RegistrationForm />
+          ) : (
+            <Card className="border-red-600/40 bg-red-50 dark:bg-red-950">
+              <CardContent className="p-8 text-center">
+                <div className="h-16 w-16 mx-auto mb-4 flex items-center justify-center text-4xl text-red-600">!</div>
+                <h3 className="text-2xl font-bold mb-2">Registration Closed</h3>
+                <p className="mb-4 text-muted-foreground">
+                  Registration for the Land Rover Festival is currently closed. Please check back later or contact us for assistance.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </section>
 
